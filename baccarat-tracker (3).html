@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0d;--surface:#161616;--surface2:#1e1e1e;--border:#2a2a2a;
+  --text:#e8e4d9;--muted:#666;--accent:#c9a84c;
+  --banker:#c0392b;--banker-bright:#e74c3c;--banker-dim:#3d1111;
+  --player:#1565c0;--player-bright:#2196f3;--player-dim:#0a1a3d;
+  --tie:#2d6a4f;--tie-bright:#52b788;--tie-dim:#1b3f2f;
+  --win:#2d6a4f;--win-bright:#52b788;--win-dim:#1b3f2f;
+  --loss:#8b2020;--loss-bright:#d94040;--loss-dim:#3d1111;
+  --caution:#b5621e;--caution-bright:#e07c3a;--caution-dim:#2a1200;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:0}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 28px;display:flex;align-items:baseline;gap:16px}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.08em;color:var(--accent)}
+header span{font-size:11px;color:var(--muted);letter-spacing:.05em}
+
+.main{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+.section-label{font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.block{margin-bottom:24px}
+
+/* TOP CONTROLS */
+.controls-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.ctrl{font-family:'DM Mono',monospace;font-size:11px;padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;letter-spacing:.04em;transition:border-color .1s,color .1s}
+.ctrl:hover{border-color:#444;color:var(--text)}.ctrl:active{transform:scale(.96)}
+.ctrl:disabled{opacity:.3;cursor:not-allowed}
+.ctrl.danger{border-color:var(--loss);color:var(--loss-bright)}.ctrl.danger:hover{background:var(--loss-dim)}
+.ctrl.export{border-color:rgba(201,168,76,.4);color:var(--accent)}.ctrl.export:hover{background:rgba(201,168,76,.1)}
+.round-badge{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:var(--accent);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 14px;display:flex;align-items:baseline;gap:6px}
+.round-badge span{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+
+/* OUTCOME BUTTONS */
+.outcome-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.ob{padding:18px 8px 14px;border-radius:6px;border:1px solid;cursor:pointer;text-align:center;transition:all .13s;font-family:'Bebas Neue',sans-serif}
+.ob-letter{font-size:42px;letter-spacing:.04em;line-height:1}
+.ob-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-top:2px}
+.ob.banker{background:var(--banker-dim);border-color:var(--banker);color:var(--banker-bright)}
+.ob.banker:hover{background:var(--banker);color:#fff;box-shadow:0 0 16px rgba(192,57,43,.4)}
+.ob.player{background:var(--player-dim);border-color:var(--player);color:var(--player-bright)}
+.ob.player:hover{background:var(--player);color:#fff;box-shadow:0 0 16px rgba(21,101,192,.4)}
+.ob.tie{background:var(--tie-dim);border-color:var(--tie);color:var(--tie-bright)}
+.ob.tie:hover{background:var(--tie);color:#fff;box-shadow:0 0 16px rgba(45,106,79,.4)}
+
+/* WIN / LOSS */
+.wl-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.wlb{padding:14px 8px;border-radius:6px;border:1px solid;cursor:pointer;text-align:center;transition:all .13s;font-family:'Bebas Neue',sans-serif}
+.wlb-letter{font-size:32px;letter-spacing:.04em}
+.wlb-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.65;margin-top:2px}
+.wlb.win-b{background:var(--win-dim);border-color:var(--win);color:var(--win-bright)}
+.wlb.win-b:hover{background:var(--win);color:#fff}
+.wlb.loss-b{background:var(--loss-dim);border-color:var(--loss);color:var(--loss-bright)}
+.wlb.loss-b:hover{background:var(--loss);color:#fff}
+.wlb.disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+
+/* BONUS */
+
+/* SCOREBOARD — small dots */
+.scoreboard-wrap{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;overflow:hidden}
+.scoreboard{display:flex;gap:3px;overflow-x:auto;align-items:flex-start;min-height:80px;padding-bottom:4px}
+.sb-col{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.sb-chip{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1px solid transparent}
+.sb-chip.B{background:var(--banker);border-color:var(--banker-bright)}
+.sb-chip.P{background:var(--player);border-color:var(--player-bright)}
+.sb-chip.T{background:var(--tie);border-color:var(--tie-bright)}
+.sb-chip.newest{box-shadow:0 0 0 2px var(--accent)}
+
+/* RIGHT PANEL */
+.right-col{display:flex;flex-direction:column;gap:16px}
+
+/* RECOMMENDATION BOX */
+.rec-box{border-radius:6px;border:1px solid;padding:12px 14px;transition:all .3s}
+.rec-box.cautious{background:var(--loss-dim);border-color:var(--loss);color:var(--loss-bright)}
+.rec-box.watch{background:var(--caution-dim);border-color:var(--caution);color:var(--caution-bright)}
+.rec-box.play{background:var(--win-dim);border-color:var(--win);color:var(--win-bright)}
+.rec-box.exit{background:#1a0020;border-color:#9c27b0;color:#ce93d8}
+.rec-box.waiting{background:var(--surface2);border-color:var(--border);color:var(--muted)}
+.rec-signal{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em}
+.rec-reason{font-size:10px;letter-spacing:.04em;margin-top:4px;line-height:1.5;opacity:.85}
+.rec-pattern{font-size:10px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08);color:var(--accent);letter-spacing:.03em}
+
+/* BET DISPLAY */
+.bet-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.bp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
+.bp-row:last-child{border-bottom:none}
+.bp-lbl{font-size:10px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.bp-val{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;color:var(--text)}
+.bp-val.accent{color:var(--accent)}
+.side-chip{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;padding:3px 14px;border-radius:4px;border:1px solid}
+.side-chip.B{background:var(--banker);color:#fff;border-color:var(--banker-bright)}
+.side-chip.P{background:var(--player);color:#fff;border-color:var(--player-bright)}
+.side-chip.none{background:var(--surface2);color:var(--muted);border-color:var(--border)}
+.res-hist{display:flex;gap:4px;flex-wrap:wrap;padding:10px 14px}
+.rh-chip{font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid;letter-spacing:.04em}
+.rh-chip.w{background:var(--win-dim);color:var(--win-bright);border-color:var(--win)}
+.rh-chip.l{background:var(--loss-dim);color:var(--loss-bright);border-color:var(--loss)}
+.rh-chip.cur{border-color:var(--accent)!important}
+
+/* STATS */
+.stats-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr}
+.stat-col{border-right:1px solid var(--border)}.stat-col:last-child{border-right:none}
+.stat-col-head{font-size:10px;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:8px 4px;border-bottom:1px solid var(--border)}
+.stat-col-head.B{background:var(--banker-dim);color:var(--banker-bright)}
+.stat-col-head.P{background:var(--player-dim);color:var(--player-bright)}
+.stat-col-head.T{background:var(--tie-dim);color:var(--tie-bright)}
+.stat-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px}
+.stat-item:last-child{border-bottom:none}
+.stat-item .sk{color:var(--muted);letter-spacing:.04em}
+.stat-item .sv{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em}
+.stat-item.top{background:rgba(201,168,76,.07)}.stat-item.top .sv{color:var(--accent)}
+
+/* TIE GAPS */
+.tie-gaps-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 14px}
+.tie-gaps-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.tie-gap{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:3px 9px;border-radius:4px;background:var(--tie-dim);color:var(--tie-bright);border:1px solid var(--tie)}
+
+/* CHOP GRID */
+.chop-grid-wrap{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:auto;max-height:420px}
+.chop-table{border-collapse:collapse;font-size:11px;min-width:100%}
+.chop-table th{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.06em;padding:5px 8px;text-align:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted);position:sticky;top:0;z-index:1;white-space:nowrap}
+.chop-table th.th-P{color:var(--player-bright)}.chop-table th.th-B{color:var(--banker-bright)}.chop-table th.th-series{color:var(--accent)}
+.chop-table td{padding:4px 8px;text-align:center;border:1px solid var(--border);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;white-space:nowrap}
+.chop-table tr:hover td{background:rgba(255,255,255,.03)}
+.chop-table td.td-hash{color:var(--muted);font-size:11px;background:var(--surface2)}
+.chop-table td.td-dot{padding:4px 6px}
+.chop-table .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chop-table .dot.B{background:var(--banker)}.chop-table .dot.P{background:var(--player)}.chop-table .dot.T{background:var(--tie)}
+.chop-table td.pos{color:var(--win-bright)}.chop-table td.neg{color:var(--loss-bright)}.chop-table td.zero{color:var(--muted)}
+.chop-table td.leading{color:var(--accent)!important;background:rgba(201,168,76,.1)}
+.chop-table td.closed{color:#2a2a2a;background:rgba(0,0,0,.4)}
+.chop-table td.empty-cell{color:var(--border);background:var(--surface)}
+.chop-table td.pattern-cell{background:rgba(156,39,176,.15)!important;color:#ce93d8!important}
+.chop-table tr.latest-row td{background:rgba(255,255,255,.04)}
+.chop-table tr.phase-cautious td.td-hash{border-left:3px solid var(--loss)}
+.chop-table tr.phase-watch td.td-hash{border-left:3px solid var(--caution)}
+.chop-table tr.phase-play td.td-hash{border-left:3px solid var(--win)}
+.chop-table tr.phase-exit td.td-hash{border-left:3px solid #9c27b0}
+/* ── BET ENGINE ── */
+.bet-engine{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.be-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.be-title{font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px 0;color:var(--muted)}
+.be-body{display:flex;align-items:center;gap:10px;padding:8px 12px 10px}
+.be-chip{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:.04em;line-height:1;
+  width:62px;height:62px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid transparent}
+.be-chip.B{background:var(--banker);color:#fff;border-color:var(--banker-bright)}
+.be-chip.P{background:var(--player);color:#fff;border-color:var(--player-bright)}
+.be-chip.none{background:var(--surface2);color:var(--muted);border-color:var(--border);font-size:28px}
+.be-meta{display:flex;flex-direction:column;gap:3px;flex:1}
+.be-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.be-reason{font-size:11px;color:var(--text);line-height:1.4}
+.be-conf{display:inline-block;font-size:9px;padding:2px 7px;border-radius:3px;margin-top:3px;letter-spacing:.05em}
+.be-conf.high{background:rgba(45,106,79,.25);color:var(--win-bright)}
+.be-conf.medium{background:rgba(181,98,30,.2);color:var(--caution-bright)}
+.be-conf.low{background:rgba(255,255,255,.06);color:var(--muted)}
+/* pattern box — two side-by-side bets */
+.be-pat-body{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.be-pat-slot{background:var(--surface);padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.be-pat-slot .be-chip{font-size:38px;width:48px;height:48px}
+.be-pat-num{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.be-pat-result{font-size:11px;font-weight:500}
+.be-pat-result.win{color:var(--win-bright)}.be-pat-result.loss{color:var(--loss-bright)}.be-pat-result.pending{color:var(--muted)}
+.be-pat-footer{padding:6px 12px 8px;font-size:10px;color:var(--muted);letter-spacing:.04em;border-top:1px solid var(--border)}
+.be-box.active-B{border-color:var(--banker);box-shadow:0 0 12px rgba(192,57,43,.25)}
+.be-box.active-P{border-color:var(--player);box-shadow:0 0 12px rgba(21,101,192,.25)}
+.be-box.active-pat{border-color:#9c27b0;box-shadow:0 0 12px rgba(156,39,176,.2)}
+.be-box.expired{opacity:.45}
+/* Threshold zone */
+.zone-box{border-radius:8px;border:2px solid var(--border);padding:0;overflow:hidden;margin-bottom:0}
+.zone-box.zone-sit{border-color:var(--border);background:var(--surface)}
+.zone-box.zone-ready{border-color:var(--caution);background:var(--caution-dim);box-shadow:0 0 14px rgba(181,98,30,.2)}
+.zone-box.zone-bet{border-color:var(--win-bright);background:var(--win-dim);box-shadow:0 0 18px rgba(46,204,113,.3)}
+.zone-header{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.zone-indicator{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:.04em;line-height:1;min-width:48px;text-align:center}
+.zone-indicator.sit{color:var(--muted)}
+.zone-indicator.ready{color:var(--caution-bright)}
+.zone-indicator.bet{color:var(--win-bright)}
+.zone-right{flex:1;display:flex;flex-direction:column;gap:4px}
+.zone-status{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em}
+.zone-status.sit{color:var(--muted)}
+.zone-status.ready{color:var(--caution-bright)}
+.zone-status.bet{color:var(--win-bright)}
+.zone-sub{font-size:10px;color:var(--muted);letter-spacing:.04em}
+.zone-bets{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.zone-bet-slot{background:var(--surface);padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.zone-bet-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.zone-bet-chip{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.04em;width:52px;height:52px;border-radius:7px;display:flex;align-items:center;justify-content:center;border:2px solid transparent}
+.zone-bet-chip.B{background:var(--banker);color:#fff;border-color:var(--banker-bright)}
+.zone-bet-chip.P{background:var(--player);color:#fff;border-color:var(--player-bright)}
+.zone-bet-chip.pending{background:var(--surface2);color:var(--muted);border-color:var(--border);font-size:18px}
+.zone-bet-result{font-size:11px;font-weight:500}
+.zone-bet-result.win{color:var(--win-bright)}.zone-bet-result.loss{color:var(--loss-bright)}.zone-bet-result.pending{color:var(--muted)}
+.zone-footer{padding:6px 14px 8px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);letter-spacing:.04em}
+/* Pattern scanner */
+.ps-card{border-radius:6px;border:1px solid var(--border);overflow:hidden;margin-bottom:8px}
+.ps-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2)}
+.ps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ps-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;flex:1}
+.ps-conf{font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;border:1px solid transparent}
+.ps-conf.high{background:rgba(45,106,79,.25);color:var(--win-bright);border-color:rgba(45,106,79,.4)}
+.ps-conf.medium{background:rgba(181,98,30,.2);color:var(--caution-bright);border-color:rgba(181,98,30,.3)}
+.ps-conf.caution{background:rgba(139,32,32,.25);color:var(--loss-bright);border-color:rgba(139,32,32,.4)}
+.ps-body{padding:8px 12px 10px;display:flex;align-items:center;gap:10px}
+.ps-bet-chip{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:.04em;width:58px;height:58px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid transparent}
+.ps-bet-chip.B{background:var(--banker);color:#fff;border-color:var(--banker-bright)}
+.ps-bet-chip.P{background:var(--player);color:#fff;border-color:var(--player-bright)}
+.ps-bet-chip.watch{background:var(--surface2);color:var(--muted);border-color:var(--border);font-size:20px}
+.ps-meta{display:flex;flex-direction:column;gap:4px;flex:1}
+.ps-desc{font-size:10px;color:var(--muted);letter-spacing:.03em;line-height:1.4}
+.ps-action{font-size:10px;letter-spacing:.04em}
+.ps-series{font-size:9px;color:var(--muted)}
+.ps-empty{font-size:11px;color:rgba(255,255,255,.25);padding:.5rem 0;letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Baccarat Tracker</h1>
+  <span>scoreboard · chop series · recommendation · export</span>
+</header>
+
+<div class="main">
+
+  <div class="controls-row">
+    <div class="round-badge"><span>Rounds</span><span id="roundCount">0</span></div>
+    <button class="ctrl" id="undoBtn" disabled onclick="undo()">↩ undo</button>
+    <button class="ctrl danger" onclick="reset()">✕ new shoe</button>
+    <button class="ctrl export" onclick="exportCSV()">↓ export csv</button>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT -->
+    <div>
+      <div class="block">
+        <div class="section-label">Outcome</div>
+        <div class="outcome-grid">
+          <div class="ob banker" onclick="recordOutcome('B')"><div class="ob-letter">B</div><div class="ob-sub">Banker</div></div>
+          <div class="ob tie" onclick="recordOutcome('T')"><div class="ob-letter">T</div><div class="ob-sub">Tie</div></div>
+          <div class="ob player" onclick="recordOutcome('P')"><div class="ob-letter">P</div><div class="ob-sub">Player</div></div>
+        </div>
+        <div class="wl-grid">
+          <div class="wlb win-b disabled" id="winBtn" onclick="recordResult('W')"><div class="wlb-letter">Win</div><div class="wlb-sub">−1 unit</div></div>
+          <div class="wlb loss-b disabled" id="lossBtn" onclick="recordResult('L')"><div class="wlb-letter">Loss</div><div class="wlb-sub">+1 unit</div></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="section-label">Scoreboard — bead plate</div>
+        <div class="scoreboard-wrap">
+          <div class="scoreboard" id="scoreboard"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+
+      <!-- BET ENGINE -->
+      <div class="bet-engine">
+        <div class="section-label" style="margin-bottom:6px">Bet engine</div>
+
+        <!-- THRESHOLD ZONE — main cockpit -->
+        <div class="zone-box zone-sit" id="zoneBox">
+          <div class="zone-header">
+            <div class="zone-indicator sit" id="zoneIndicator">—</div>
+            <div class="zone-right">
+              <div class="zone-status sit" id="zoneStatus">Sitting Out</div>
+              <div class="zone-sub" id="zoneSub">Lead series below +3 — wait</div>
+            </div>
+          </div>
+          <div class="zone-bets" id="zoneBets" style="display:none">
+            <div class="zone-bet-slot">
+              <div class="zone-bet-lbl">Bet 1</div>
+              <div class="zone-bet-chip pending" id="zoneBet1">?</div>
+              <div class="zone-bet-result pending" id="zoneRes1">Pending</div>
+            </div>
+            <div class="zone-bet-slot">
+              <div class="zone-bet-lbl">Bet 2</div>
+              <div class="zone-bet-chip pending" id="zoneBet2">?</div>
+              <div class="zone-bet-result pending" id="zoneRes2">After bet 1</div>
+            </div>
+          </div>
+          <div class="zone-footer" id="zoneFooter" style="display:none">—</div>
+        </div>
+          <div class="be-title">Matrix — shoe character</div>
+          <div class="be-body">
+            <div class="be-chip none" id="matrixChip">?</div>
+            <div class="be-meta">
+              <div class="be-label" id="matrixLabel">Waiting</div>
+              <div class="be-reason" id="matrixReason">Need 5+ hands</div>
+              <span class="be-conf low" id="matrixConf">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern signal -->
+        <div class="be-box" id="patBox" style="display:none">
+          <div class="be-title" id="patTitle">Pattern — series oscillation</div>
+          <div class="be-pat-body">
+            <div class="be-pat-slot" id="patSlot1">
+              <div class="be-pat-num">Bet 1</div>
+              <div class="be-chip none" id="patChip1">?</div>
+              <div class="be-pat-result pending" id="patRes1">—</div>
+            </div>
+            <div class="be-pat-slot" id="patSlot2">
+              <div class="be-pat-num">Bet 2</div>
+              <div class="be-chip none" id="patChip2">?</div>
+              <div class="be-pat-result pending" id="patRes2">—</div>
+            </div>
+          </div>
+          <div class="be-pat-footer" id="patFooter">—</div>
+        </div>
+      </div>
+
+      <!-- PATTERN SCANNER -->
+      <div>
+        <div class="section-label" style="margin-bottom:8px">Pattern scanner — 7 patterns</div>
+        <div id="patternScanner">
+          <div class="ps-empty">No patterns yet — need 4+ hands</div>
+        </div>
+      </div>
+
+      <!-- RECOMMENDATION -->
+      <div>
+        <div class="section-label">Recommended play</div>
+        <div class="rec-box waiting" id="recBox">
+          <div class="rec-signal" id="recSignal">Waiting</div>
+          <div class="rec-reason" id="recReason">Enter hands to build signal</div>
+          <div class="rec-pattern" id="recPattern" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- BET PANEL -->
+      <div>
+        <div class="section-label">Next bet</div>
+        <div class="bet-panel">
+          <div class="bp-row"><span class="bp-lbl">Units</span><span class="bp-val accent" id="betUnits">1</span></div>
+          <div class="bp-row"><span class="bp-lbl">Side</span><span class="side-chip none" id="betSide">—</span></div>
+          <div class="bp-row"><span class="bp-lbl">Column</span><span class="bp-val" id="colInfo" style="font-size:16px;color:var(--muted)">—</span></div>
+          <div class="res-hist" id="resHist"></div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div>
+        <div class="section-label">Streak stats</div>
+        <div class="stats-panel">
+          <div class="stats-grid">
+            <div class="stat-col"><div class="stat-col-head B">Banker</div><div id="statsB"></div></div>
+            <div class="stat-col"><div class="stat-col-head P">Player</div><div id="statsP"></div></div>
+            <div class="stat-col"><div class="stat-col-head T">Tie</div><div id="statsT"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIE GAPS -->
+      <div>
+        <div class="section-label">Rounds between ties</div>
+        <div class="tie-gaps-panel">
+          <div class="tie-gaps-row" id="tieGaps"><span style="font-size:11px;color:var(--muted)">No ties yet</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHOP GRID -->
+  <div class="block" style="margin-top:24px">
+    <div class="section-label">Chop series grid — +1 chop/opposite · −1 streak/repeat · closes at −4 · rescue at −3 · <span style="color:#ce93d8">purple = 0/+1 pattern</span> · left bar = phase</div>
+    <div class="chop-grid-wrap">
+      <table class="chop-table">
+        <thead id="chopHead"></thead>
+        <tbody id="chopBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ─── STATE ─── */
+let rounds=[], betUnits=1, betSide=null, patternBets=null;
+let zoneBets=null; // {bet1,bet2,handsLeft,bet1Result,bet2Result,triggerVal}
+
+/* ─── HELPERS ─── */
+function getLastBP(){
+  for(let i=rounds.length-1;i>=0;i--){if(rounds[i].outcome!=='T')return rounds[i].outcome;}
+  return null;
+}
+function toSide(type, base){
+  // type='chop' → opposite of base; type='streak' → same as base
+  if(!base)return null;
+  return type==='chop'?(base==='B'?'P':'B'):base;
+}
+
+/* ─── COLUMNS ─── */
+function buildColumns(rounds){
+  const cols=[];let col=[];let lastBP=null;
+  for(const r of rounds){
+    if(r.outcome==='T'){col.push('T');continue;}
+    if(lastBP===null){lastBP=r.outcome;col.push(r.outcome);}
+    else if(r.outcome===lastBP){col.push(r.outcome);}
+    else{cols.push(col);col=[r.outcome];lastBP=r.outcome;}
+  }
+  if(col.length)cols.push(col);
+  return cols;
+}
+
+/* ─── STATS ─── */
+function computeStats(rounds){
+  const sc={B:{1:0,2:0,3:0},P:{1:0,2:0,3:0},T:{1:0,2:0,3:0}};
+  const all=rounds.map(r=>r.outcome);
+  let i=0;
+  while(i<all.length){
+    let j=i;while(j<all.length&&all[j]===all[i])j++;
+    const len=j-i,o=all[i];
+    sc[o][1]++;if(len>=2)sc[o][2]++;if(len>=3)sc[o][3]++;
+    i=j;
+  }
+  const tieGaps=[];let lastTie=-1;
+  for(let k=0;k<rounds.length;k++){
+    if(rounds[k].outcome==='T'){if(lastTie>=0)tieGaps.push(k-lastTie-1);lastTie=k;}
+  }
+  return{sc,tieGaps};
+}
+
+/* ─── CHOP GRID ENGINE ─── */
+function computeChopGrid(rounds){
+  const bp=rounds.filter(r=>r.outcome!=='T');
+  if(!bp.length)return{rows:[],numSeries:0,activeSeries:[]};
+  let seriesCounter=0;
+  let activeSeries=[];
+  const rows=[];
+
+  function spawnSeries(startHand,initVal){
+    seriesCounter++;
+    activeSeries.push({id:seriesCounter,value:initVal,closed:false,startHand,history:[{hand:startHand,val:initVal}]});
+  }
+
+  let lastOutcome=null;
+
+  bp.forEach((r,hi)=>{
+    const handNum=hi+1;
+    const outcome=r.outcome;
+    const isChop=lastOutcome!==null&&outcome!==lastOutcome;
+
+    if(lastOutcome===null){
+      spawnSeries(handNum,+1);
+      spawnSeries(handNum,-1);
+    } else if(isChop){
+      spawnSeries(handNum,+1);
+      spawnSeries(handNum,-1);
+    }
+
+    // delta: Chop/Opposite=+1, Streak/Repeat=-1
+    const delta=lastOutcome===null?0:(isChop?+1:-1);
+    const rescueNeeded=[];
+
+    activeSeries.forEach(s=>{
+      if(s.closed)return;
+      if(lastOutcome!==null)s.value+=delta;
+      if(s.value<=-4){s.closed=true;}
+      else if(s.value<=-3){rescueNeeded.push(handNum);}
+      s.history.push({hand:handNum,val:s.closed?'X':s.value});
+    });
+
+    if(rescueNeeded.length){
+      const alreadyRescued=activeSeries.some(s=>s.startHand===handNum&&s.value===1&&!s.closed);
+      if(!alreadyRescued)spawnSeries(handNum,+1);
+    }
+
+    const cells={};
+    activeSeries.forEach(s=>{
+      if(handNum>=s.startHand)cells[s.id]=s.closed?'X':s.value;
+    });
+
+    // Determine phase for this row
+    const openVals=activeSeries.filter(s=>!s.closed&&handNum>=s.startHand).map(s=>s.value);
+    const closedCount=activeSeries.filter(s=>s.closed&&s.startHand<=handNum).length;
+    const positiveCount=openVals.filter(v=>v>=3).length;
+    const leadVal=openVals.length?Math.max(...openVals):-99;
+
+    let phase='cautious';
+    if(handNum<5){phase='cautious';}
+    else if(leadVal>=5&&positiveCount>=3){phase='play';}
+    else if(leadVal>=3&&positiveCount>=2){phase='watch';}
+    else if(closedCount>0&&leadVal<0){phase='exit';}
+    else if(leadVal<0){phase='cautious';}
+    else{phase='watch';}
+
+    rows.push({handNum,outcome,cells,phase,leadVal,openVals});
+    lastOutcome=outcome;
+  });
+
+  return{rows,numSeries:seriesCounter,activeSeries};
+}
+
+/* ─── 7-PATTERN SCANNER ─── */
+/*
+  Each pattern needs a window of values from a series history.
+  Returns array of detected patterns with name, confidence, next bet type.
+  next: 'chop' = bet opposite of last, 'streak' = bet same as last
+*/
+function scanPatterns(rows,seriesIds){
+  if(rows.length<4)return[];
+  const found=[];
+  const lastBP=getLastBP();
+  if(!lastBP)return[];
+
+  seriesIds.forEach(id=>{
+    // Build value history for this series (last 6 values)
+    const hist=[];
+    for(let i=Math.max(0,rows.length-6);i<rows.length;i++){
+      const v=rows[i].cells[id];
+      if(v!==undefined&&v!=='X')hist.push(Number(v));
+    }
+    if(hist.length<4)return;
+    const t=hist.slice(-4); // last 4 values
+    const t3=hist.slice(-3); // last 3
+
+    // P1: Staircase — 0,+1,0,+1 or 0,−1,0,−1 (same pair twice, same direction)
+    {
+      const sameA=t[0]===t[2],sameB=t[1]===t[3];
+      const d1=t[1]-t[0],d2=t[3]-t[2];
+      const sameDir=(d1>0&&d2>0)||(d1<0&&d2<0);
+      if(sameA&&sameB&&sameDir&&d1!==0){
+        found.push({
+          id,name:'Staircase',
+          desc:`${t[0]},${t[1]>0?'+':''}${t[1]},${t[2]},${t[3]>0?'+':''}${t[3]} — same pair ×2`,
+          next:d1>0?'chop':'streak',
+          confidence:'high',
+          color:'#ce93d8'
+        });
+      }
+    }
+
+    // P2: Double Step — +1,+2,+1,+2 (climbing rhythm)
+    {
+      const d1=t[1]-t[0],d2=t[2]-t[1],d3=t[3]-t[2];
+      if(d1===1&&d2===-1&&d3===1&&t[1]===t[3]&&t[0]===t[2]){
+        found.push({
+          id,name:'Double Step',
+          desc:`${t[0]},${t[1]>0?'+':''}${t[1]},${t[2]},${t[3]>0?'+':''}${t[3]} — climbing rhythm`,
+          next:'chop',
+          confidence:'high',
+          color:'#52b788'
+        });
+      }
+    }
+
+    // P3: Breakout — three same values then a step up
+    if(hist.length>=4){
+      const h4=hist.slice(-4);
+      if(h4[0]===h4[1]&&h4[1]===h4[2]&&h4[3]>h4[2]){
+        found.push({
+          id,name:'Breakout',
+          desc:`${h4[0]},${h4[1]},${h4[2]} flat → ${h4[3]>0?'+':''}${h4[3]} break`,
+          next:'chop',
+          confidence:'medium',
+          color:'#93c5fd'
+        });
+      }
+    }
+
+    // P4: Recovery Arc — 4 consecutive gains
+    {
+      const d1=t[1]-t[0],d2=t[2]-t[1],d3=t[3]-t[2];
+      if(d1>0&&d2>0&&d3>0){
+        found.push({
+          id,name:'Recovery Arc',
+          desc:`${t[0]}→${t[1]>0?'+':''}${t[1]}→${t[2]>0?'+':''}${t[2]}→${t[3]>0?'+':''}${t[3]} rising`,
+          next:'chop',
+          confidence:'high',
+          color:'#ffd54f'
+        });
+      }
+    }
+
+    // P5: Flat Top — last 3 identical at +3 or above
+    if(t3.length===3&&t3[0]===t3[1]&&t3[1]===t3[2]&&t3[0]>=3){
+      found.push({
+        id,name:'Flat Top',
+        desc:`${t3[0]},${t3[1]},${t3[2]} — stable high`,
+        next:'chop',
+        confidence:'medium',
+        color:'#ffb74d'
+      });
+    }
+
+    // P6: Triple Zero — last 3 values are 0 (caution)
+    if(t3.length===3&&t3[0]===0&&t3[1]===0&&t3[2]===0){
+      found.push({
+        id,name:'Triple Zero',
+        desc:`0,0,0 — shoe at decision point`,
+        next:'watch',
+        confidence:'caution',
+        color:'#ef5350'
+      });
+    }
+
+    // P7: Fake Recovery — climbs 3 then drops (trap)
+    {
+      const d1=t[1]-t[0],d2=t[2]-t[1],d3=t[3]-t[2];
+      if(d1>0&&d2>0&&d3<0&&t[3]<t[2]){
+        found.push({
+          id,name:'Fake Recovery',
+          desc:`${t[0]}→${t[1]>0?'+':''}${t[1]}→${t[2]>0?'+':''}${t[2]}→${t[3]>0?'+':''}${t[3]} reversal`,
+          next:'streak',
+          confidence:'caution',
+          color:'#ef5350'
+        });
+      }
+    }
+  });
+
+  // Deduplicate by name — keep highest-id (most recent) per pattern type
+  const seen={};
+  return found.filter(p=>{
+    if(!seen[p.name]){seen[p.name]=true;return true;}
+    return false;
+  });
+}
+
+/* ─── PATTERN DETECTOR (legacy purple highlight) ─── */
+function detectPattern(rows,seriesIds){
+  if(rows.length<4)return{found:false};
+  const patterns=[];
+  seriesIds.forEach(id=>{
+    const hist=[];
+    for(let i=Math.max(0,rows.length-6);i<rows.length;i++){
+      const v=rows[i].cells[id];
+      if(v!==undefined&&v!=='X')hist.push(v);
+    }
+    if(hist.length<4)return;
+    const tail=hist.slice(-4);
+    const sameA=tail[0]===tail[2],sameB=tail[1]===tail[3];
+    const samePair=sameA&&sameB;
+    const d1=tail[1]-tail[0],d2=tail[3]-tail[2];
+    const sameDir=(d1>0&&d2>0)||(d1<0&&d2<0);
+    if(samePair&&sameDir&&d1!==0){
+      patterns.push({id,direction:d1>0?'up':'down',tail});
+    }
+  });
+  return patterns.length?{found:true,patterns}:{found:false};
+}
+
+/* ─── RECOMMENDATION ENGINE ─── */
+function computeRecommendation(rows){
+  if(!rows.length)return{cls:'waiting',signal:'Waiting',reason:'Enter hands to build signal'};
+  if(rows.length<5)return{cls:'waiting',signal:'Building…',reason:`${rows.length} hands — need at least 5 to read shoe character`};
+
+  const last=rows[rows.length-1];
+  const prev=rows.length>=2?rows[rows.length-2]:null;
+  const prev2=rows.length>=3?rows[rows.length-3]:null;
+
+  const openVals=last.openVals||[];
+  const leadVal=last.leadVal;
+  const positiveCount=openVals.filter(v=>v>=3).length;
+  const closedCount=rows.reduce((acc,r)=>{
+    const allC=Object.values(r.cells).filter(v=>v==='X').length;
+    return Math.max(acc,allC);
+  },0);
+
+  // Exit: lead dropped 2+ consecutive hands
+  const leadDropping=prev&&prev2&&last.leadVal<prev.leadVal&&prev.leadVal<prev2.leadVal;
+  if(leadDropping&&last.leadVal<=0){
+    return{cls:'exit',signal:'⛔ Exit',reason:`Leading series dropped ${prev2.leadVal}→${prev.leadVal}→${last.leadVal} — 3 consecutive falls. Shoe character reversing.`};
+  }
+
+  if(last.phase==='play'&&leadVal>=5){
+    return{cls:'play',signal:'🟢 Play',reason:`Leading series at +${leadVal} · ${positiveCount} series above +3 · Strong chop shoe. Scale up.`};
+  }
+  if(last.phase==='play'||leadVal>=3&&positiveCount>=2){
+    return{cls:'play',signal:'🟢 Play',reason:`Leading series at +${leadVal} · ${positiveCount} series positive. Chop dominant. Entry zone.`};
+  }
+  if(last.phase==='watch'||leadVal>=1){
+    return{cls:'watch',signal:'🟡 Watch',reason:`Leading series at +${leadVal}. Shoe building character — wait for 3+ series above +3 before sizing up.`};
+  }
+  if(leadVal<0||closedCount>=3){
+    return{cls:'cautious',signal:'🔴 Cautious',reason:`Leading series at ${leadVal}. ${closedCount} series closed. Volatile shoe — minimum bets only.`};
+  }
+  return{cls:'watch',signal:'🟡 Watch',reason:'Shoe establishing. Stay small until clear chop dominance.'};
+}
+
+/* ─── PATTERN SCANNER RENDER ─── */
+function renderPatternScanner(rows,seriesIds){
+  const el=document.getElementById('patternScanner');
+  if(!el)return;
+  const lastBP=getLastBP();
+  if(!lastBP||rows.length<4){
+    el.innerHTML='<div class="ps-empty">No patterns yet — need 4+ hands</div>';return;
+  }
+
+  const detected=scanPatterns(rows,seriesIds);
+  if(!detected.length){
+    el.innerHTML='<div class="ps-empty">No patterns active — watching…</div>';return;
+  }
+
+  el.innerHTML=detected.map(p=>{
+    const betSide=p.next==='chop'?(lastBP==='B'?'P':'B'):p.next==='streak'?lastBP:null;
+    const chipContent=betSide?betSide:'?';
+    const chipCls=betSide?betSide:'watch';
+    const actionText=p.next==='chop'
+      ?`Bet ${betSide==='B'?'Banker':'Player'} — chop`
+      :p.next==='streak'
+      ?`Bet ${betSide==='B'?'Banker':'Player'} — streak`
+      :'Hold — shoe at decision point';
+    const actionColor=p.confidence==='high'?'var(--win-bright)':p.confidence==='medium'?'var(--caution-bright)':'var(--loss-bright)';
+
+    return`<div class="ps-card">
+      <div class="ps-header" style="border-left:3px solid ${p.color}">
+        <div class="ps-dot" style="background:${p.color}"></div>
+        <div class="ps-name">${p.name}</div>
+        <span class="ps-conf ${p.confidence}">${p.confidence}</span>
+      </div>
+      <div class="ps-body">
+        <div class="ps-bet-chip ${chipCls}">${chipContent}</div>
+        <div class="ps-meta">
+          <div class="ps-action" style="color:${actionColor}">${actionText}</div>
+          <div class="ps-desc">${p.desc}</div>
+          <div class="ps-series">Series ${p.id}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderChopGrid(){
+  const{rows,numSeries,activeSeries}=computeChopGrid(rounds);
+  const head=document.getElementById('chopHead');
+  const body=document.getElementById('chopBody');
+
+  if(!rows.length){
+    head.innerHTML=`<tr><th>#</th><th class="th-P">P</th><th class="th-B">B</th></tr>`;
+    body.innerHTML=`<tr><td class="td-hash" colspan="3" style="padding:14px;font-size:11px;color:var(--muted)">No hands yet</td></tr>`;
+    return;
+  }
+
+  const allIds=new Set();
+  rows.forEach(r=>Object.keys(r.cells).forEach(id=>allIds.add(parseInt(id))));
+  const seriesIds=[...allIds].sort((a,b)=>a-b);
+
+  head.innerHTML=`<tr>
+    <th>#</th><th class="th-P">P</th><th class="th-B">B</th>
+    ${seriesIds.map(id=>`<th class="th-series">${id}</th>`).join('')}
+  </tr>`;
+
+  // Detect pattern on leading series
+  const patternResult=detectPattern(rows,seriesIds);
+  const patternIds=new Set(patternResult.found?patternResult.patterns.map(p=>p.id):[]);
+
+  // Find lead id in last row
+  const lastRow=rows[rows.length-1];
+  let leadingId=null,leadingVal=-Infinity;
+  seriesIds.forEach(id=>{
+    const v=lastRow.cells[id];
+    if(v!==undefined&&v!=='X'&&typeof v==='number'&&v>leadingVal){leadingVal=v;leadingId=id;}
+  });
+
+  body.innerHTML=rows.map((row,ri)=>{
+    const isLatest=ri===rows.length-1;
+    const pDot=row.outcome==='P'?`<span class="dot P"></span>`:'';
+    const bDot=row.outcome==='B'?`<span class="dot B"></span>`:'';
+    const cells=seriesIds.map(id=>{
+      const v=row.cells[id];
+      if(v===undefined)return`<td class="empty-cell">·</td>`;
+      if(v==='X')return`<td class="closed">✕</td>`;
+      const isLead=isLatest&&id===leadingId;
+      const isPat=patternIds.has(id);
+      let cls=isLead?'leading':v>0?'pos':v<0?'neg':'zero';
+      if(isPat)cls+=' pattern-cell';
+      return`<td class="${cls}">${v>0?'+':''}${v}</td>`;
+    }).join('');
+    return`<tr class="${isLatest?'latest-row':''} phase-${row.phase}">
+      <td class="td-hash">${row.handNum}</td>
+      <td class="td-dot">${pDot}</td>
+      <td class="td-dot">${bDot}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  // Scroll to bottom
+  const wrap=document.querySelector('.chop-grid-wrap');
+  if(wrap)wrap.scrollTop=wrap.scrollHeight;
+
+  renderBetEngine(rows);
+  renderPatternScanner(rows,seriesIds);
+  tryActivateZone(rows);
+  renderZoneBox(rows);
+}
+
+/* ─── EXPORT CSV ─── */
+function exportCSV(){
+  if(!rounds.length){alert('No data to export.');return;}
+  const{rows}=computeChopGrid(rounds);
+  const allIds=new Set();
+  rows.forEach(r=>Object.keys(r.cells).forEach(id=>allIds.add(parseInt(id))));
+  const seriesIds=[...allIds].sort((a,b)=>a-b);
+
+  const header=['Round','Outcome','Phase','LeadVal',...seriesIds.map(id=>'S'+id)].join(',');
+  const dataRows=rows.map(row=>{
+    const cells=seriesIds.map(id=>{
+      const v=row.cells[id];
+      return v===undefined?'':v==='X'?'closed':v;
+    });
+    return[row.handNum,row.outcome,row.phase,row.leadVal,...cells].join(',');
+  });
+
+  const csv=[header,...dataRows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='baccarat-shoe.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ─── BET ENGINE ─── */
+function computeMatrixSignal(rows){
+  if(rows.length<5)return null;
+  const last=rows[rows.length-1];
+  const prev=rows[rows.length-2];
+  const prev2=rows.length>=3?rows[rows.length-3]:null;
+  const phase=last.phase;
+  const leadVal=last.leadVal;
+  const d1=prev?last.leadVal-prev.leadVal:0;
+  const d2=prev&&prev2?prev.leadVal-prev2.leadVal:0;
+  const lastBP=getLastBP();
+  if(!lastBP)return null;
+
+  let recType=null, confidence='low', reason='';
+
+  if(phase==='play'){
+    if(d1>=0){recType='chop';confidence=leadVal>=7?'high':'medium';reason=`Lead +${leadVal} · Phase play · Climbing`;}
+    else if(d1<0&&d2<0){recType='streak';confidence='low';reason=`Lead +${leadVal} · Phase play · Dropping 2 hands`;}
+    else{recType='chop';confidence='medium';reason=`Lead +${leadVal} · Phase play · One step back`;}
+  } else if(phase==='watch'){
+    if(d1>0&&d2>0){recType='chop';confidence='medium';reason=`Lead +${leadVal} · Building`;}
+    else if(d1<0&&d2<0){recType='streak';confidence='low';reason=`Lead +${leadVal} · Declining`;}
+    else if(d1>0){recType='chop';confidence='low';reason=`Lead +${leadVal} · Mixed — lean chop`;}
+    else return null;
+  } else return null;
+
+  const bet=toSide(recType,lastBP);
+  return{bet,recType,confidence,reason};
+}
+
+function updatePatternBets(newOutcome){
+  // Advance existing pattern bets on a BP outcome
+  if(!patternBets||newOutcome==='T')return;
+  if(patternBets.handsLeft===2){
+    patternBets.bet1Result=newOutcome===patternBets.bet1?'win':'loss';
+    patternBets.handsLeft=1;
+  } else if(patternBets.handsLeft===1){
+    patternBets.bet2Result=newOutcome===patternBets.bet2?'win':'loss';
+    patternBets.handsLeft=0;
+  }
+}
+
+function detectAndSetPattern(){
+  // Only set a new pattern when none is active
+  if(patternBets&&patternBets.handsLeft>0)return;
+  const{rows}=computeChopGrid(rounds);
+  if(!rows.length)return;
+  const allIds=new Set();
+  rows.forEach(r=>Object.keys(r.cells).forEach(id=>allIds.add(parseInt(id))));
+  const seriesIds=[...allIds].sort((a,b)=>a-b);
+  const pr=detectPattern(rows,seriesIds);
+  if(!pr.found){patternBets=null;return;}
+  const p=pr.patterns[0];
+  const lastBP=getLastBP();
+  if(!lastBP)return;
+  // direction 'down' (d1<0): next pair starts with chop then streak
+  // direction 'up'  (d1>0): next pair starts with streak then chop
+  const b1Type=p.direction==='down'?'chop':'streak';
+  const b2Type=p.direction==='down'?'streak':'chop';
+  const bet1=toSide(b1Type,lastBP);
+  const bet2=toSide(b2Type,bet1); // bet2 predicted from bet1 outcome
+  patternBets={bet1,bet2,handsLeft:2,type:p.direction,seriesId:p.id,bet1Result:null,bet2Result:null};
+}
+
+function renderBetEngine(rows){
+  // ── Matrix ──
+  const sig=computeMatrixSignal(rows);
+  const mBox=document.getElementById('matrixBox');
+  const mChip=document.getElementById('matrixChip');
+  const mLabel=document.getElementById('matrixLabel');
+  const mReason=document.getElementById('matrixReason');
+  const mConf=document.getElementById('matrixConf');
+  if(!sig){
+    mBox.className='be-box';
+    mChip.className='be-chip none';mChip.textContent='?';
+    mLabel.textContent='Waiting';mReason.textContent='Need more hands';
+    mConf.className='be-conf low';mConf.textContent='—';
+  } else {
+    mBox.className=`be-box active-${sig.bet}`;
+    mChip.className=`be-chip ${sig.bet}`;mChip.textContent=sig.bet;
+    mLabel.textContent=`Bet ${sig.bet==='B'?'Banker':'Player'} — ${sig.recType}`;
+    mReason.textContent=sig.reason;
+    mConf.className=`be-conf ${sig.confidence}`;
+    mConf.textContent=sig.confidence==='high'?'High confidence':sig.confidence==='medium'?'Medium confidence':'Low confidence';
+  }
+
+  // ── Pattern ──
+  const pb=document.getElementById('patBox');
+  if(!patternBets){pb.style.display='none';return;}
+  pb.style.display='block';
+
+  const expired=patternBets.handsLeft===0;
+  pb.className='be-box '+(expired?'expired':'active-pat');
+  document.getElementById('patTitle').textContent=
+    `Pattern — series ${patternBets.seriesId} · ${patternBets.type==='down'?'0,−1 repeating':'0,+1 repeating'}`;
+
+  // Bet 1
+  const c1=document.getElementById('patChip1');
+  c1.className=`be-chip ${patternBets.bet1}`;c1.textContent=patternBets.bet1;
+  const r1=document.getElementById('patRes1');
+  if(patternBets.bet1Result==='win'){r1.className='be-pat-result win';r1.textContent='✓ Win';}
+  else if(patternBets.bet1Result==='loss'){r1.className='be-pat-result loss';r1.textContent='✗ Loss';}
+  else{r1.className='be-pat-result pending';r1.textContent='Pending';}
+
+  // Bet 2
+  const c2=document.getElementById('patChip2');
+  c2.className=`be-chip ${patternBets.bet2}`;c2.textContent=patternBets.bet2;
+  const r2=document.getElementById('patRes2');
+  if(patternBets.bet2Result==='win'){r2.className='be-pat-result win';r2.textContent='✓ Win';}
+  else if(patternBets.bet2Result==='loss'){r2.className='be-pat-result loss';r2.textContent='✗ Loss';}
+  else if(patternBets.handsLeft<=1&&patternBets.bet1Result){r2.className='be-pat-result pending';r2.textContent='Pending';}
+  else{r2.className='be-pat-result pending';r2.textContent='After bet 1';}
+
+  document.getElementById('patFooter').textContent=expired?'Signal complete — watching for next pattern':
+    `${patternBets.handsLeft} hand${patternBets.handsLeft>1?'s':''} remaining`;
+}
+
+/* ─── MAIN RENDER ─── */
+function render(){
+  const cols=buildColumns(rounds);
+  const{sc,tieGaps}=computeStats(rounds);
+  const lastCol=cols.length?cols[cols.length-1]:[];
+  const lastBP=lastCol.filter(x=>x!=='T');
+
+  // SCOREBOARD — small dots
+  const sb=document.getElementById('scoreboard');
+  sb.innerHTML='';
+  cols.forEach((col,ci)=>{
+    const d=document.createElement('div');d.className='sb-col';
+    col.forEach((o,ri)=>{
+      const chip=document.createElement('div');chip.className='sb-chip '+o;
+      if(ci===cols.length-1&&ri===col.length-1)chip.classList.add('newest');
+      d.appendChild(chip);
+    });
+    sb.appendChild(d);
+  });
+  sb.scrollLeft=sb.scrollWidth;
+
+  // BET PANEL
+  document.getElementById('betUnits').textContent=betUnits;
+  const sideEl=document.getElementById('betSide');
+  if(betSide){sideEl.className='side-chip '+betSide;sideEl.textContent=betSide==='B'?'Banker':'Player';}
+  else{sideEl.className='side-chip none';sideEl.textContent='—';}
+  const colStr=lastBP.length?`${lastBP.length}× ${lastBP[0]==='B'?'Banker':'Player'}`:'—';
+  document.getElementById('colInfo').textContent=colStr;
+
+  // Result history
+  const hist=document.getElementById('resHist');
+  const withRes=rounds.filter(r=>r.result);
+  if(!withRes.length)hist.innerHTML='<span style="font-size:11px;color:var(--muted)">No results yet</span>';
+  else hist.innerHTML=withRes.slice(-18).map((r,i,arr)=>`<span class="rh-chip ${r.result==='W'?'w':'l'}${i===arr.length-1?' cur':''}">${r.result}${r.units}</span>`).join('');
+
+  // Win/loss buttons
+  const hasUnresolved=rounds.length>0&&rounds[rounds.length-1].result===null;
+  document.getElementById('winBtn').classList.toggle('disabled',!hasUnresolved);
+  document.getElementById('lossBtn').classList.toggle('disabled',!hasUnresolved);
+
+
+  // Streak stats
+  ['B','P','T'].forEach(o=>{
+    const el=document.getElementById('stats'+o);
+    const s=sc[o];
+    const total=s[1]+s[2]+s[3];
+    const top=total===0?0:s[3]>=s[2]&&s[3]>=s[1]?3:s[2]>=s[1]?2:1;
+    el.innerHTML=[{k:1,lbl:'Chop'},{k:2,lbl:'2 row'},{k:3,lbl:'3+'}].map(({k,lbl})=>
+      `<div class="stat-item${k===top&&total>0?' top':''}"><span class="sk">${lbl}</span><span class="sv">${s[k]}</span></div>`
+    ).join('');
+  });
+
+  // Tie gaps
+  const tgEl=document.getElementById('tieGaps');
+  if(!tieGaps.length)tgEl.innerHTML='<span style="font-size:11px;color:var(--muted)">No ties yet</span>';
+  else tgEl.innerHTML=tieGaps.map(g=>`<span class="tie-gap">${g}</span>`).join('');
+
+  document.getElementById('roundCount').textContent=rounds.length;
+  document.getElementById('undoBtn').disabled=!rounds.length;
+
+  renderChopGrid();
+}
+
+/* ─── ZONE BOX ─── */
+function renderZoneBox(rows){
+  const box=document.getElementById('zoneBox');
+  const ind=document.getElementById('zoneIndicator');
+  const status=document.getElementById('zoneStatus');
+  const sub=document.getElementById('zoneSub');
+  const bets=document.getElementById('zoneBets');
+  const footer=document.getElementById('zoneFooter');
+  if(!box)return;
+
+  if(!rows.length){
+    box.className='zone-box zone-sit';
+    ind.className='zone-indicator sit';ind.textContent='—';
+    status.className='zone-status sit';status.textContent='Sitting Out';
+    sub.textContent='Lead series below +3 — wait';
+    bets.style.display='none';footer.style.display='none';return;
+  }
+
+  const leadVal=rows[rows.length-1].leadVal;
+  const lastBP=getLastBP();
+
+  // If zone bets are active (2-bet sequence running)
+  if(zoneBets&&zoneBets.handsLeft>0){
+    box.className='zone-box zone-bet';
+    ind.className='zone-indicator bet';ind.textContent=leadVal>=0?'+'+leadVal:leadVal;
+    status.className='zone-status bet';
+    status.textContent=`Bet ${3-zoneBets.handsLeft+1} of 2`;
+    sub.textContent=`Triggered at +${zoneBets.triggerVal} — ${zoneBets.handsLeft} hand${zoneBets.handsLeft>1?'s':''} left`;
+    bets.style.display='grid';footer.style.display='block';
+
+    // Bet 1
+    const b1=document.getElementById('zoneBet1');
+    const r1=document.getElementById('zoneRes1');
+    b1.className=`zone-bet-chip ${zoneBets.bet1}`;b1.textContent=zoneBets.bet1;
+    if(zoneBets.bet1Result==='win'){r1.className='zone-bet-result win';r1.textContent='✓ Win';}
+    else if(zoneBets.bet1Result==='loss'){r1.className='zone-bet-result loss';r1.textContent='✗ Loss';}
+    else{r1.className='zone-bet-result pending';r1.textContent='Pending';}
+
+    // Bet 2 — same bet as bet 1 (continue chop)
+    const b2=document.getElementById('zoneBet2');
+    const r2=document.getElementById('zoneRes2');
+    if(zoneBets.bet1Result){
+      // bet 2 side = opposite of what just happened (keep betting chop)
+      b2.className=`zone-bet-chip ${zoneBets.bet2}`;b2.textContent=zoneBets.bet2;
+      if(zoneBets.bet2Result==='win'){r2.className='zone-bet-result win';r2.textContent='✓ Win';}
+      else if(zoneBets.bet2Result==='loss'){r2.className='zone-bet-result loss';r2.textContent='✗ Loss';}
+      else{r2.className='zone-bet-result pending';r2.textContent='Pending';}
+    } else {
+      b2.className='zone-bet-chip pending';b2.textContent='?';
+      r2.className='zone-bet-result pending';r2.textContent='After bet 1';
+    }
+    footer.textContent='2 bets only — stop after this signal regardless of result';
+    return;
+  }
+
+  // Zone bets done or expired — show result summary then watch
+  if(zoneBets&&zoneBets.handsLeft===0){
+    const wins=[zoneBets.bet1Result,zoneBets.bet2Result].filter(r=>r==='win').length;
+    const losses=[zoneBets.bet1Result,zoneBets.bet2Result].filter(r=>r==='loss').length;
+    box.className='zone-box zone-sit';
+    ind.className='zone-indicator sit';ind.textContent=leadVal>=0?'+'+leadVal:leadVal;
+    status.className='zone-status sit';status.textContent='Signal Complete';
+    sub.textContent=`Result: ${wins}W ${losses}L · Watching for next +3/+4`;
+    bets.style.display='grid';footer.style.display='block';
+    // Show results only
+    const b1=document.getElementById('zoneBet1');const r1=document.getElementById('zoneRes1');
+    b1.className=`zone-bet-chip ${zoneBets.bet1}`;b1.textContent=zoneBets.bet1;
+    r1.className=`zone-bet-result ${zoneBets.bet1Result}`;r1.textContent=zoneBets.bet1Result==='win'?'✓ Win':'✗ Loss';
+    const b2=document.getElementById('zoneBet2');const r2=document.getElementById('zoneRes2');
+    b2.className=`zone-bet-chip ${zoneBets.bet2||'pending'}`;b2.textContent=zoneBets.bet2||'?';
+    r2.className=`zone-bet-result ${zoneBets.bet2Result||'pending'}`;
+    r2.textContent=zoneBets.bet2Result==='win'?'✓ Win':zoneBets.bet2Result==='loss'?'✗ Loss':'—';
+    footer.textContent='Waiting for next +3/+4 signal to activate again';
+    return;
+  }
+
+  // No active zone bets — check if we should activate
+  if(leadVal>=3&&lastBP){
+    // Ready — at threshold
+    const betSideNow=lastBP==='B'?'P':'B'; // bet chop = opposite of last
+    box.className='zone-box zone-bet';
+    ind.className='zone-indicator bet';ind.textContent='+'+leadVal;
+    status.className='zone-status bet';
+    status.textContent=leadVal>=4?'🔥 Zone +4 — Bet Now':'✅ Zone +3 — Bet Now';
+    sub.textContent=`Bet ${betSideNow==='B'?'Banker':'Player'} — chop · 2 bets only`;
+    bets.style.display='grid';footer.style.display='block';
+
+    // Preview chips
+    const b1=document.getElementById('zoneBet1');const r1=document.getElementById('zoneRes1');
+    b1.className=`zone-bet-chip ${betSideNow}`;b1.textContent=betSideNow;
+    r1.className='zone-bet-result pending';r1.textContent='Pending';
+    const b2=document.getElementById('zoneBet2');const r2=document.getElementById('zoneRes2');
+    b2.className='zone-bet-chip pending';b2.textContent='?';
+    r2.className='zone-bet-result pending';r2.textContent='After bet 1';
+    footer.textContent='Enter next outcome to start the 2-bet sequence';
+  } else {
+    box.className='zone-box zone-sit';
+    ind.className='zone-indicator '+(leadVal>=2?'ready':'sit');
+    ind.textContent=leadVal>=0?'+'+leadVal:leadVal;
+    status.className='zone-status '+(leadVal>=2?'ready':'sit');
+    status.textContent=leadVal>=2?'Building…':'Sitting Out';
+    sub.textContent=leadVal>=2?`+${leadVal} — needs +3 or +4 to activate`:'Lead series below +3 — wait';
+    bets.style.display='none';footer.style.display='none';
+  }
+}
+
+/* ─── ZONE BETS TRACKING ─── */
+function updateZoneBets(outcome){
+  if(!outcome||outcome==='T')return;
+  // If zone bets running, advance them
+  if(zoneBets&&zoneBets.handsLeft>0){
+    if(zoneBets.handsLeft===2){
+      zoneBets.bet1Result=outcome===zoneBets.bet1?'win':'loss';
+      // Bet 2: opposite of this outcome (always chase chop)
+      zoneBets.bet2=outcome==='B'?'P':'B';
+      zoneBets.handsLeft=1;
+    } else if(zoneBets.handsLeft===1){
+      zoneBets.bet2Result=outcome===zoneBets.bet2?'win':'loss';
+      zoneBets.handsLeft=0;
+    }
+    return;
+  }
+  // Check if we should activate zone bets (lead just at 3+ and no active/recent signal)
+  // This is handled in renderZoneBox — activation happens on next outcome after +3
+}
+
+function tryActivateZone(rows){
+  if(!rows.length)return;
+  const leadVal=rows[rows.length-1].leadVal;
+  const lastBP=getLastBP();
+  // Activate if: lead >= 3, no active zone bets, and last zone bets are done/null
+  if(leadVal>=3&&lastBP&&(!zoneBets||zoneBets.handsLeft===0)){
+    const activationBet=lastBP==='B'?'P':'B';
+    zoneBets={bet1:activationBet,bet2:null,handsLeft:2,triggerVal:leadVal,bet1Result:null,bet2Result:null};
+  }
+}
+
+/* ─── ACTIONS ─── */
+function recordOutcome(o){
+  if(rounds.length>0&&rounds[rounds.length-1].result===null)return;
+  if(o!=='T'&&betSide===null)betSide=o;
+  updatePatternBets(o);
+  updateZoneBets(o);
+  rounds.push({outcome:o,result:null,units:betUnits,side:betSide});
+  detectAndSetPattern();
+  render();
+}
+
+function recordResult(res){
+  if(!rounds.length||rounds[rounds.length-1].result!==null)return;
+  const last=rounds[rounds.length-1];
+  last.result=res;
+  if(res==='W')betUnits=Math.max(1,betUnits-1);
+  else betUnits+=1;
+  let consL=0;
+  for(let i=rounds.length-1;i>=0;i--){
+    if(rounds[i].outcome==='T')continue;
+    if(rounds[i].result==='L')consL++;else break;
+  }
+  if(consL>=3&&betSide)betSide=betSide==='B'?'P':'B';
+  render();
+}
+
+function undo(){
+  if(!rounds.length)return;
+  const last=rounds[rounds.length-1];
+  if(last.result!==null){betUnits=last.units;last.result=null;}
+  else{
+    rounds.pop();
+    if(!rounds.length){betSide=null;betUnits=1;}
+    else{const p=rounds[rounds.length-1];betSide=p.side;betUnits=p.units;}
+  }
+  patternBets=null;zoneBets=null;
+  detectAndSetPattern();
+  render();
+}
+
+function reset(){
+  if(!confirm('Start a new shoe? All data will be cleared.'))return;
+  rounds=[];betUnits=1;betSide=null;patternBets=null;zoneBets=null;render();
+}
+
+render();
+</script>
+</body>
+</html>
