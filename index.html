@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Session Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0a;
+    --bg2: #13130e;
+    --bg3: #1a1a14;
+    --border: #2a2518;
+    --border2: #3a3520;
+    --gold: #e2b854;
+    --text: #e8dcc0;
+    --muted: #b0a080;
+    --dim: #8a7e60;
+    --dimmer: #6a6040;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --blue: #3b82f6;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .header p {
+    font-size: 11px;
+    color: var(--dimmer);
+    font-family: var(--mono);
+    margin-top: 4px;
+  }
+
+  .section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .label {
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: var(--mono);
+    margin-bottom: 4px;
+  }
+
+  .btn {
+    background: var(--bg3);
+    color: var(--dim);
+    border: 1px solid var(--border2);
+    padding: 6px 14px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.1s;
+  }
+  .btn:hover { border-color: var(--gold); color: var(--gold); }
+  .btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 600; }
+  .btn.danger { color: var(--red); border-color: rgba(239,68,68,0.25); }
+  .btn.danger:hover { border-color: var(--red); }
+  .btn:disabled { opacity: 0.3; cursor: default; }
+
+  .outcome-btn {
+    padding: 16px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--mono);
+    cursor: pointer;
+    flex: 1;
+    letter-spacing: 2px;
+    transition: all 0.1s;
+    border-width: 2px;
+    border-style: solid;
+  }
+  .outcome-btn:hover { transform: scale(1.02); }
+  .outcome-btn:active { transform: scale(0.98); }
+  .outcome-btn.player { background: rgba(59,130,246,0.1); color: var(--blue); border-color: rgba(59,130,246,0.4); }
+  .outcome-btn.banker { background: rgba(239,68,68,0.1); color: var(--red); border-color: rgba(239,68,68,0.4); }
+  .outcome-btn.tie { background: rgba(138,126,96,0.1); color: var(--dim); border-color: rgba(138,126,96,0.4); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+  .stat-card { text-align: center; }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--dimmer);
+    padding: 8px 16px;
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { border-bottom-color: var(--gold); color: var(--gold); }
+
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: var(--mono);
+    outline: none;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th {
+    padding: 6px 8px;
+    font-size: 10px;
+    font-family: var(--mono);
+    text-align: right;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    text-align: right;
+    border-bottom: 1px solid var(--bg3);
+  }
+  tr:nth-child(even) { background: var(--bg); }
+  tr:nth-child(odd) { background: #111; }
+
+  .hand-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-family: var(--mono);
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .bar-track {
+    width: 60px;
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .bar-fill { height: 100%; border-radius: 3px; }
+
+  .scroll-box { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+  .scroll-box thead { position: sticky; top: 0; background: var(--bg2); z-index: 1; }
+
+  .streak-badge {
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 8px 12px;
+    text-align: center;
+    display: inline-block;
+  }
+
+  .finding {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  .flex-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .flex-grow { flex: 1; }
+  .gap-12 { gap: 12px; }
+  .gap-4 { gap: 4px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-10 { margin-bottom: 10px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-6 { margin-bottom: 6px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-10 { margin-top: 10px; }
+  .text-center { text-align: center; }
+  .hidden { display: none; }
+
+  @media (max-width: 600px) {
+    body { padding: 12px 8px; }
+    .outcome-btn { padding: 14px 8px; font-size: 14px; }
+    .stat-value { font-size: 18px; }
+    .section { padding: 12px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>Session Tracker</h1>
+    <p>Log real hands · Analyze unit progression · Find failure patterns</p>
+  </div>
+
+  <!-- Session Controls -->
+  <div class="controls-row">
+    <button class="btn" onclick="newSession()">+ New Session</button>
+    <label class="btn" style="display:inline-flex;align-items:center;gap:4px">
+      Import CSV
+      <input type="file" accept=".csv" onchange="handleCSVImport(event)" style="display:none">
+    </label>
+    <button class="btn" id="exportBtn" onclick="exportSession()" style="display:none">Export CSV</button>
+    <div class="flex-grow"></div>
+    <select id="sessionSelect" onchange="selectSession(this.value)">
+      <option value="">Select session…</option>
+    </select>
+  </div>
+
+  <!-- Empty State -->
+  <div class="section text-center" id="emptyState" style="padding:40px;color:var(--dimmer)">
+    <p style="font-size:16px;margin-bottom:8px">Create a new session or import a CSV to get started.</p>
+    <p style="font-size:12px;font-family:var(--mono)">CSV format: Hand#, Outcome (banker/player/tie), …</p>
+  </div>
+
+  <!-- Session Content (hidden until session active) -->
+  <div id="sessionContent" class="hidden">
+    <!-- Tabs -->
+    <div class="tabs" id="tabBar"></div>
+
+    <!-- Tab Panels -->
+    <div id="inputPanel"></div>
+    <div id="logPanel" class="hidden"></div>
+    <div id="analyticsPanel" class="hidden"></div>
+    <div id="globalPanel" class="hidden"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ───
+const STORAGE_KEY = "baccarat-sessions-v2";
+let sessions = [];
+let activeSessionId = null;
+let currentTab = "input";
+
+const P_BANKER = 0.4586;
+const P_PLAYER = 0.4462;
+
+// ─── Persistence ───
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions, activeSessionId })); } catch(e) {}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d) { sessions = d.sessions || []; activeSessionId = d.activeSessionId || null; }
+  } catch(e) {}
+}
+
+// ─── Helpers ───
+const fmt = (n) => n == null ? "—" : typeof n === "number" ?
+  n.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:1}) : n;
+
+function getActiveSession() { return sessions.find(s => s.id === activeSessionId); }
+
+// ─── Compute all hands ───
+function computeHands(hands, startingSide) {
+  let betSize = 1, currentSide = startingSide || "player", oppositeStreak = 0, bankroll = 0, peak = 0;
+  for (let i = 0; i < hands.length; i++) {
+    const h = hands[i];
+    const prevBet = betSize, prevSide = currentSide;
+    if (h.outcome === "tie") {
+      oppositeStreak = 0;
+      h._c = { betSize: prevBet, side: prevSide, bankroll, pnl: 0, peak, drawdown: peak - bankroll, won: null, nextBet: betSize, nextSide: currentSide };
+      continue;
+    }
+    const won = h.outcome === prevSide;
+    let pnl = 0;
+    if (won) {
+      pnl = prevSide === "banker" ? prevBet * 0.95 : prevBet;
+      bankroll += pnl;
+      betSize = Math.max(1, prevBet - 1);
+    } else {
+      pnl = -prevBet;
+      bankroll -= prevBet;
+      betSize = prevBet + 1;
+    }
+    if (bankroll > peak) peak = bankroll;
+    const dd = peak - bankroll;
+    const oppSide = prevSide === "player" ? "banker" : "player";
+    if (h.outcome === oppSide) oppositeStreak++; else oppositeStreak = 0;
+    if (oppositeStreak >= 3) { currentSide = oppSide; oppositeStreak = 0; }
+    h._c = {
+      betSize: prevBet, side: prevSide, bankroll: Math.round(bankroll * 100) / 100,
+      pnl: Math.round(pnl * 100) / 100, peak, drawdown: Math.round(dd * 100) / 100,
+      nextBet: betSize, nextSide: currentSide, won,
+    };
+  }
+  return hands;
+}
+
+// ─── Analytics ───
+function analyzeHands(allHands) {
+  if (!allHands.length) return null;
+  const unitLevels = {};
+  const recoveries = [];
+  let currentRecovery = null;
+  let maxLevel = 0;
+  const THRESHOLDS = [3, 5, 6, 7, 8, 10, 12, 15];
+  const dangerEntries = [];
+  let currentStreak = { type: null, count: 0, startLevel: 0, startIdx: 0 };
+  const streaks = [];
+  let chopCount = 0, maxChop = 0, chopStart = -1, lastResult = null;
+  let totalWins = 0, totalLosses = 0, totalTies = 0;
+
+  for (let i = 0; i < allHands.length; i++) {
+    const h = allHands[i], c = h._c;
+    if (!c) continue;
+    const level = c.betSize;
+    if (!unitLevels[level]) unitLevels[level] = { count: 0, totalPnl: 0, wins: 0, losses: 0, ties: 0 };
+    unitLevels[level].count++;
+    if (h.outcome === "tie") { unitLevels[level].ties++; totalTies++; continue; }
+    unitLevels[level].totalPnl += c.pnl;
+    if (c.won) { unitLevels[level].wins++; totalWins++; }
+    else { unitLevels[level].losses++; totalLosses++; }
+    if (level > maxLevel) maxLevel = level;
+
+    if (level > 1 && !currentRecovery) {
+      currentRecovery = { startIdx: i, peakLevel: level, startBankroll: c.bankroll - c.pnl, hands: 0 };
+    }
+    if (currentRecovery) {
+      currentRecovery.hands++;
+      if (level > currentRecovery.peakLevel) currentRecovery.peakLevel = level;
+      if (c.nextBet === 1 || i === allHands.length - 1) {
+        currentRecovery.endIdx = i;
+        currentRecovery.recovered = c.nextBet === 1;
+        currentRecovery.endBankroll = c.bankroll;
+        currentRecovery.pnl = c.bankroll - currentRecovery.startBankroll;
+        recoveries.push(currentRecovery);
+        currentRecovery = null;
+      }
+    }
+    for (const t of THRESHOLDS) {
+      if (level === t && (i === 0 || allHands[i-1]._c?.betSize < t))
+        dangerEntries.push({ threshold: t, idx: i, bankroll: c.bankroll });
+    }
+    const result = c.won ? "W" : "L";
+    if (result === currentStreak.type) currentStreak.count++;
+    else {
+      if (currentStreak.count > 0) streaks.push({ ...currentStreak, endIdx: i - 1 });
+      currentStreak = { type: result, count: 1, startLevel: level, startIdx: i };
+    }
+    if (lastResult && result !== lastResult) {
+      chopCount++;
+      if (chopStart === -1) chopStart = i - 1;
+    } else { if (chopCount >= 4) {} chopCount = result !== lastResult ? 1 : 0; chopStart = i; }
+    if (chopCount > maxChop) maxChop = chopCount;
+    lastResult = result;
+  }
+  if (currentStreak.count > 0) streaks.push({ ...currentStreak, endIdx: allHands.length - 1 });
+
+  const dangerOutcomes = {};
+  for (const t of THRESHOLDS) {
+    const entries = dangerEntries.filter(d => d.threshold === t);
+    if (!entries.length) continue;
+    let recovered = 0, wentHigher = 0, avgPeak = 0, avgHands = 0;
+    for (const entry of entries) {
+      const rec = recoveries.find(r => r.startIdx <= entry.idx && r.endIdx >= entry.idx);
+      if (rec) {
+        if (rec.recovered) recovered++;
+        if (rec.peakLevel > t) wentHigher++;
+        avgPeak += rec.peakLevel;
+        avgHands += rec.hands;
+      }
+    }
+    dangerOutcomes[t] = {
+      times: entries.length,
+      recoveredPct: recovered / entries.length * 100,
+      wentHigherPct: wentHigher / entries.length * 100,
+      avgPeak: avgPeak / entries.length,
+      avgHandsToRecover: Math.round(avgHands / entries.length),
+    };
+  }
+
+  return {
+    unitLevels, maxLevel, recoveries, dangerOutcomes,
+    loseStreaks: streaks.filter(s => s.type === "L").sort((a, b) => b.count - a.count).slice(0, 10),
+    winStreaks: streaks.filter(s => s.type === "W").sort((a, b) => b.count - a.count).slice(0, 5),
+    maxChop, totalHands: allHands.length, totalWins, totalLosses, totalTies,
+  };
+}
+
+// ─── SVG Charts ───
+function svgBankrollChart(hands, width = 680, height = 140) {
+  if (hands.length < 2) return "";
+  const vals = hands.map(h => h._c?.bankroll ?? 0);
+  const levels = hands.map(h => h._c?.betSize ?? 1);
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const range = max - min || 1, pad = range * 0.1;
+  const sx = (i) => (i / (hands.length - 1)) * width;
+  const sy = (v) => height - 16 - ((v - min + pad) / (range + pad * 2)) * (height - 16);
+  const zeroY = sy(0);
+
+  let segs = [], segStart = 0, segColor = "#e2b854";
+  for (let i = 1; i <= hands.length; i++) {
+    const lev = i < hands.length ? (levels[i] || 1) : -1;
+    const col = lev >= 8 ? "#ef4444" : lev >= 5 ? "#f59e0b" : "#e2b854";
+    if (col !== segColor || i === hands.length) {
+      const pts = [];
+      for (let j = segStart; j <= Math.min(i, hands.length - 1); j++) pts.push(`${sx(j)},${sy(vals[j])}`);
+      segs.push(`<polyline points="${pts.join(" ")}" fill="none" stroke="${segColor}" stroke-width="1.5"/>`);
+      segStart = i; segColor = col;
+    }
+  }
+  return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:${height}px">
+    <line x1="0" y1="${zeroY}" x2="${width}" y2="${zeroY}" stroke="#444" stroke-width="0.5" stroke-dasharray="4,3"/>
+    ${segs.join("")}
+  </svg>`;
+}
+
+function svgUnitLadder(hands, width = 680, height = 100) {
+  if (hands.length < 2) return "";
+  const levels = hands.map(h => h._c?.betSize ?? 1);
+  const maxLev = Math.max(...levels, 5);
+  const sx = (i) => (i / (hands.length - 1)) * width;
+  const sy = (v) => height - 10 - ((v - 1) / (maxLev - 1 || 1)) * (height - 20);
+
+  let threshLines = "";
+  for (const t of [5, 8, 10]) {
+    if (t > maxLev) continue;
+    const c = t >= 8 ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.19)";
+    const tc = t >= 8 ? "#ef4444" : "#f59e0b";
+    threshLines += `<line x1="0" y1="${sy(t)}" x2="${width}" y2="${sy(t)}" stroke="${c}" stroke-width="0.5" stroke-dasharray="3,3"/>`;
+    threshLines += `<text x="${width-2}" y="${sy(t)-3}" font-size="8" fill="${tc}" text-anchor="end" font-family="var(--mono)">${t}</text>`;
+  }
+  let lines = "";
+  for (let i = 1; i < levels.length; i++) {
+    const col = levels[i] >= 8 ? "#ef4444" : levels[i] >= 5 ? "#f59e0b" : "#22c55e";
+    lines += `<line x1="${sx(i-1)}" y1="${sy(levels[i-1])}" x2="${sx(i)}" y2="${sy(levels[i])}" stroke="${col}" stroke-width="1.5"/>`;
+  }
+  return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:${height}px">
+    ${threshLines}
+    <line x1="0" y1="${sy(1)}" x2="${width}" y2="${sy(1)}" stroke="rgba(34,197,94,0.13)" stroke-width="0.5"/>
+    ${lines}
+  </svg>`;
+}
+
+// ─── CSV ───
+function exportSession() {
+  const sess = getActiveSession();
+  if (!sess || !sess.hands.length) return;
+  const h = sess.hands.map(x => ({...x}));
+  computeHands(h, sess.startingSide);
+  const headers = "Hand#,Outcome,Side,BetSize,P&L,Bankroll,Drawdown,NextBet,NextSide";
+  const rows = h.map((x, i) => {
+    const c = x._c || {};
+    return [i+1, x.outcome, c.side||"", c.betSize||"", c.pnl??"", c.bankroll??"", c.drawdown??"", c.nextBet??"", c.nextSide??""].join(",");
+  });
+  const csv = [headers, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `${sess.name.replace(/\s+/g,"_")}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleCSVImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const lines = ev.target.result.split("\n").slice(1).filter(l => l.trim());
+    const hands = [];
+    for (const line of lines) {
+      const o = (line.split(",")[1] || "").trim().toLowerCase();
+      if (["banker","player","tie"].includes(o)) hands.push({ outcome: o, ts: Date.now() });
+    }
+    if (hands.length) {
+      const sess = { id: Date.now(), name: file.name.replace(".csv",""), date: new Date().toISOString().slice(0,10), hands, startingSide: "player" };
+      sessions.push(sess);
+      activeSessionId = sess.id;
+      currentTab = "analytics";
+      save(); render();
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+// ─── Actions ───
+function newSession() {
+  const sess = { id: Date.now(), name: `Session ${new Date().toLocaleDateString("sv")}`, date: new Date().toISOString().slice(0,10), hands: [], startingSide: "player" };
+  sessions.push(sess);
+  activeSessionId = sess.id;
+  currentTab = "input";
+  save(); render();
+}
+function selectSession(id) {
+  activeSessionId = +id || null;
+  save(); render();
+}
+function deleteSession(id) {
+  sessions = sessions.filter(s => s.id !== id);
+  if (activeSessionId === id) activeSessionId = null;
+  save(); render();
+}
+function addHand(outcome) {
+  const sess = getActiveSession();
+  if (!sess) return;
+  sess.hands.push({ outcome, ts: Date.now() });
+  save(); render();
+}
+function undoLast() {
+  const sess = getActiveSession();
+  if (!sess || !sess.hands.length) return;
+  sess.hands.pop();
+  save(); render();
+}
+function switchTab(tab) {
+  currentTab = tab;
+  render();
+}
+
+// ─── Render ───
+function render() {
+  // Session selector
+  const sel = document.getElementById("sessionSelect");
+  const oldVal = sel.value;
+  sel.innerHTML = '<option value="">Select session…</option>' +
+    sessions.map(s => `<option value="${s.id}" ${s.id === activeSessionId ? "selected" : ""}>${s.name} (${s.hands.length} hands)</option>`).join("");
+
+  const sess = getActiveSession();
+  document.getElementById("emptyState").classList.toggle("hidden", !!sess);
+  document.getElementById("sessionContent").classList.toggle("hidden", !sess);
+  document.getElementById("exportBtn").style.display = sess ? "" : "none";
+
+  if (!sess) return;
+
+  const hands = sess.hands.map(h => ({...h}));
+  computeHands(hands, sess.startingSide);
+  const last = hands.length ? hands[hands.length - 1]._c : null;
+  const state = last ? {
+    bankroll: last.bankroll, nextBet: last.nextBet ?? 1, nextSide: last.nextSide ?? sess.startingSide,
+    drawdown: last.drawdown, peak: last.peak,
+  } : { bankroll: 0, nextBet: 1, nextSide: sess.startingSide || "player", drawdown: 0, peak: 0 };
+
+  // Tabs
+  const tabs = [
+    { key: "input", label: "Input Hands" },
+    { key: "log", label: `Log (${hands.length})` },
+    { key: "analytics", label: "Analytics" },
+    { key: "global", label: "All Sessions" },
+  ];
+  document.getElementById("tabBar").innerHTML = tabs.map(t =>
+    `<button class="tab-btn ${currentTab === t.key ? "active" : ""}" onclick="switchTab('${t.key}')">${t.label}</button>`
+  ).join("");
+
+  // Show/hide panels
+  for (const t of ["input", "log", "analytics", "global"]) {
+    document.getElementById(t + "Panel").classList.toggle("hidden", currentTab !== t);
+  }
+
+  if (currentTab === "input") renderInput(hands, state, sess);
+  else if (currentTab === "log") renderLog(hands);
+  else if (currentTab === "analytics") renderAnalytics(hands, "analyticsPanel", `This Session`);
+  else if (currentTab === "global") renderGlobal();
+}
+
+function renderInput(hands, state, sess) {
+  const betColor = state.nextBet >= 8 ? "var(--red)" : state.nextBet >= 5 ? "var(--amber)" : "var(--green)";
+  const sideColor = state.nextSide === "banker" ? "var(--red)" : "var(--blue)";
+  const brColor = state.bankroll >= 0 ? "var(--green)" : "var(--red)";
+
+  let html = `
+    <div class="section stats-grid">
+      ${[
+        { l: "Next Bet", v: state.nextBet, c: betColor },
+        { l: "Side", v: state.nextSide, c: sideColor },
+        { l: "Bankroll", v: fmt(state.bankroll), c: brColor },
+        { l: "Drawdown", v: fmt(state.drawdown), c: "var(--amber)" },
+        { l: "Hands", v: hands.length, c: "var(--text)" },
+      ].map(s => `<div class="stat-card"><div class="label">${s.l}</div><div class="stat-value" style="color:${s.c}">${s.v}</div></div>`).join("")}
+    </div>
+    <div class="section">
+      <div class="label mb-12">Record Outcome</div>
+      <div class="flex-row gap-12 mb-16">
+        <button class="outcome-btn player" onclick="addHand('player')">PLAYER</button>
+        <button class="outcome-btn banker" onclick="addHand('banker')">BANKER</button>
+        <button class="outcome-btn tie" onclick="addHand('tie')">TIE</button>
+      </div>
+      <div class="flex-row gap-4">
+        <button class="btn" onclick="undoLast()" ${!hands.length ? "disabled" : ""}>← Undo Last</button>
+        <button class="btn danger" onclick="deleteSession(${activeSessionId})">Delete Session</button>
+      </div>
+    </div>`;
+
+  if (hands.length > 2) {
+    html += `<div class="section">
+      <div class="label mb-6">Bankroll</div>
+      ${svgBankrollChart(hands)}
+      <div class="label mt-12 mb-6">Unit Ladder</div>
+      ${svgUnitLadder(hands)}
+    </div>`;
+  }
+
+  if (hands.length > 0) {
+    const recent = hands.slice(-20);
+    html += `<div class="section">
+      <div class="label mb-6">Recent Hands</div>
+      <div class="flex-row gap-4" style="flex-wrap:wrap">
+        ${recent.map(h => {
+          const c = h._c;
+          const color = h.outcome === "tie" ? "var(--dim)" : c?.won ? "var(--green)" : "var(--red)";
+          return `<div class="hand-pill" style="background:${color}10;border:1px solid ${color}40;color:${color}">
+            <div style="font-weight:600">${h.outcome === "tie" ? "T" : h.outcome[0].toUpperCase()}</div>
+            <div style="font-size:9px;opacity:0.7">${c?.betSize ?? ""}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("inputPanel").innerHTML = html;
+}
+
+function renderLog(hands) {
+  let html = `<div class="section scroll-box"><table>
+    <thead><tr>${["#","Outcome","Side","Bet","P&L","Bankroll","DD"].map(h => `<th>${h}</th>`).join("")}</tr></thead>
+    <tbody>`;
+  for (let i = 0; i < hands.length; i++) {
+    const h = hands[i], c = h._c || {};
+    const oColor = h.outcome === "tie" ? "var(--dim)" : h.outcome === "banker" ? "var(--red)" : "var(--blue)";
+    const betColor = c.betSize >= 8 ? "var(--red)" : c.betSize >= 5 ? "var(--amber)" : "var(--text)";
+    const betWeight = c.betSize >= 5 ? "600" : "400";
+    const pnlColor = c.pnl > 0 ? "var(--green)" : c.pnl < 0 ? "var(--red)" : "var(--dim)";
+    const brColor = c.bankroll >= 0 ? "var(--green)" : "var(--red)";
+    const ddColor = c.drawdown > 10 ? "var(--red)" : "var(--amber)";
+    html += `<tr>
+      <td style="color:var(--dimmer)">${i+1}</td>
+      <td style="color:${oColor}">${h.outcome}</td>
+      <td style="color:var(--muted)">${c.side||""}</td>
+      <td style="color:${betColor};font-weight:${betWeight}">${c.betSize||""}</td>
+      <td style="color:${pnlColor}">${c.pnl !== undefined ? (c.pnl > 0 ? "+" : "") + fmt(c.pnl) : ""}</td>
+      <td style="color:${brColor}">${fmt(c.bankroll)}</td>
+      <td style="color:${ddColor}">${fmt(c.drawdown)}</td>
+    </tr>`;
+  }
+  html += "</tbody></table></div>";
+  document.getElementById("logPanel").innerHTML = html;
+}
+
+function renderAnalytics(hands, targetId, label) {
+  const a = analyzeHands(hands);
+  if (!a) { document.getElementById(targetId).innerHTML = `<div class="section text-center" style="padding:30px;color:var(--dimmer)">No data to analyze.</div>`; return; }
+
+  let html = `<div class="label mb-12" style="font-size:12px;color:var(--gold)">${label} — ${a.totalHands} hands (${a.totalWins}W / ${a.totalLosses}L / ${a.totalTies}T)</div>`;
+
+  if (hands.length > 2) {
+    html += `<div class="section">
+      <div class="label mb-6">Bankroll (color = unit danger level)</div>
+      ${svgBankrollChart(hands)}
+      <div class="label mt-10 mb-6">Unit Ladder</div>
+      ${svgUnitLadder(hands)}
+    </div>`;
+  }
+
+  // Unit Level Breakdown
+  html += `<div class="section">
+    <div class="label mb-10">Unit Level Breakdown — Where You Spend Time & Money</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr>${["Level","Hands","% of Time","Wins","Losses","Net P&L","Avg P&L/Hand"].map(h => `<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>`;
+  const sortedLevels = Object.entries(a.unitLevels).sort(([a],[b]) => +a - +b);
+  for (const [level, data] of sortedLevels) {
+    const pct = (data.count / a.totalHands * 100);
+    const avgPnl = data.count > 0 ? data.totalPnl / data.count : 0;
+    const levColor = +level >= 8 ? "var(--red)" : +level >= 5 ? "var(--amber)" : "var(--green)";
+    const barColor = levColor;
+    html += `<tr>
+      <td style="color:${levColor};font-weight:700;text-align:center">${level}</td>
+      <td>${data.count}</td>
+      <td><span class="bar-track"><span class="bar-fill" style="width:${Math.min(100, pct)}%;background:${barColor}"></span></span>${pct.toFixed(1)}%</td>
+      <td style="color:var(--green)">${data.wins}</td>
+      <td style="color:var(--red)">${data.losses}</td>
+      <td style="color:${data.totalPnl >= 0 ? "var(--green)" : "var(--red)"}">${data.totalPnl >= 0 ? "+" : ""}${fmt(data.totalPnl)}</td>
+      <td style="color:${avgPnl >= 0 ? "var(--green)" : "var(--red)"}">${avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(2)}</td>
+    </tr>`;
+  }
+  html += "</tbody></table></div></div>";
+
+  // Danger Zone
+  if (Object.keys(a.dangerOutcomes).length) {
+    html += `<div class="section">
+      <div class="label mb-6">Danger Zone Analysis</div>
+      <p style="font-size:12px;color:var(--dimmer);margin-bottom:10px;font-family:var(--mono)">When you reach unit level X, what happens next?</p>
+      <div style="overflow-x:auto"><table>
+        <thead><tr>${["Threshold","Times Hit","Recovery %","Went Higher %","Avg Peak","Avg Hands to Recover"].map(h => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>`;
+    for (const [t, d] of Object.entries(a.dangerOutcomes)) {
+      const recColor = d.recoveredPct > 70 ? "var(--green)" : d.recoveredPct > 40 ? "var(--amber)" : "var(--red)";
+      const highColor = d.wentHigherPct > 50 ? "var(--red)" : "var(--amber)";
+      html += `<tr>
+        <td style="color:var(--gold);text-align:center;font-weight:700">${t}+</td>
+        <td>${d.times}</td>
+        <td style="color:${recColor}">${d.recoveredPct.toFixed(0)}%</td>
+        <td style="color:${highColor}">${d.wentHigherPct.toFixed(0)}%</td>
+        <td>${d.avgPeak.toFixed(1)}</td>
+        <td>${d.avgHandsToRecover}</td>
+      </tr>`;
+    }
+    html += "</tbody></table></div></div>";
+  }
+
+  // Recovery Episodes
+  if (a.recoveries.length) {
+    html += `<div class="section">
+      <div class="label mb-6">Recovery Episodes</div>
+      <p style="font-size:12px;color:var(--dimmer);margin-bottom:10px;font-family:var(--mono)">Each climb above 1 unit and whether it made it back.</p>
+      <div class="scroll-box" style="max-height:300px"><table>
+        <thead><tr>${["#","Start","Peak Level","Hands","Recovered?","P&L"].map(h => `<th>${h}</th>`).join("")}</tr></thead>
+        <tbody>`;
+    for (let i = 0; i < a.recoveries.length; i++) {
+      const r = a.recoveries[i];
+      const peakColor = r.peakLevel >= 8 ? "var(--red)" : r.peakLevel >= 5 ? "var(--amber)" : "var(--green)";
+      html += `<tr>
+        <td style="color:var(--dimmer)">${i+1}</td>
+        <td>Hand ${r.startIdx + 1}</td>
+        <td style="color:${peakColor};font-weight:700">${r.peakLevel}</td>
+        <td>${r.hands}</td>
+        <td style="color:${r.recovered ? "var(--green)" : "var(--red)"}">${r.recovered ? "✓" : "✗"}</td>
+        <td style="color:${r.pnl >= 0 ? "var(--green)" : "var(--red)"}">${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)}</td>
+      </tr>`;
+    }
+    html += "</tbody></table></div></div>";
+  }
+
+  // Worst Losing Streaks
+  if (a.loseStreaks.length) {
+    html += `<div class="section">
+      <div class="label mb-8">Worst Losing Streaks</div>
+      <div class="flex-row gap-4" style="flex-wrap:wrap">`;
+    for (const s of a.loseStreaks.slice(0, 8)) {
+      const col = s.count >= 6 ? "var(--red)" : "var(--amber)";
+      const border = s.count >= 6 ? "rgba(239,68,68,0.25)" : "var(--border2)";
+      html += `<div class="streak-badge" style="border:1px solid ${border}">
+        <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${col}">${s.count}</div>
+        <div style="font-size:9px;color:var(--dimmer);font-family:var(--mono)">from lvl ${s.startLevel}</div>
+      </div>`;
+    }
+    html += "</div></div>";
+  }
+
+  // Key Finding
+  if (a.maxLevel > 3) {
+    const pctAbove5 = (Object.entries(a.unitLevels).filter(([k]) => +k >= 5).reduce((s, [, v]) => s + v.count, 0) / a.totalHands * 100).toFixed(1);
+    html += `<div class="section finding"><strong style="color:var(--gold)">Key Finding:</strong>
+      Your ladder peaked at <span style="color:var(--red);font-family:var(--mono);font-weight:600">${a.maxLevel} units</span>.
+      You spent <span style="font-family:var(--mono)">${pctAbove5}%</span> of hands at level 5+.`;
+    if (a.dangerOutcomes[8]) {
+      const d = a.dangerOutcomes[8];
+      const recColor = d.recoveredPct > 60 ? "var(--green)" : "var(--red)";
+      html += ` When hitting 8+, recovery rate was <span style="color:${recColor};font-family:var(--mono);font-weight:600">${d.recoveredPct.toFixed(0)}%</span>
+        taking an average of <span style="font-family:var(--mono)">${d.avgHandsToRecover}</span> hands.`;
+    }
+    html += "</div>";
+  }
+
+  document.getElementById(targetId).innerHTML = html;
+}
+
+function renderGlobal() {
+  if (!sessions.length || !sessions.some(s => s.hands.length)) {
+    document.getElementById("globalPanel").innerHTML = `<div class="section text-center" style="padding:30px;color:var(--dimmer)">No session data to analyze yet.</div>`;
+    return;
+  }
+  const allHands = [];
+  for (const sess of sessions) {
+    const h = sess.hands.map(x => ({...x}));
+    if (h.length) { computeHands(h, sess.startingSide); allHands.push(...h); }
+  }
+  if (!allHands.length) { document.getElementById("globalPanel").innerHTML = ""; return; }
+  renderAnalytics(allHands, "globalPanel", `All ${sessions.length} Sessions (${allHands.length} hands)`);
+}
+
+// ─── Init ───
+load();
+render();
+</script>
+</body>
+</html>
