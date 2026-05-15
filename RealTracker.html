@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BP Sync Tracker</title>
+<style>
+:root{
+  --bg:#0a0c10;--surface:#12151d;--surface2:#1a1e28;--border:#252a38;
+  --text:#e8eaf0;--dim:#5a6080;--accent:#c8a84b;
+  --green:#22c55e;--red:#ef4444;--gold:#f59e0b;--blue:#60a5fa;
+  --font:'Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);padding:10px}
+
+.header{text-align:center;margin-bottom:10px}
+.header h1{font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+.header .sub{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+
+.controls{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.btn{padding:8px 18px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);color:var(--text);font-family:var(--font);
+  font-size:13px;cursor:pointer;transition:.1s;letter-spacing:.06em;font-weight:bold}
+.btn:active{transform:scale(.97)}
+.btn.B{border-color:#1e4a8a;color:var(--blue)}.btn.B:hover{background:#0d1f3a}
+.btn.P{border-color:#6b1a1a;color:#f87171}.btn.P:hover{background:#2a0a0a}
+.btn.T{border-color:#2a2a2a;color:#555}.btn.T:hover{border-color:#444;color:#888}
+.btn.sm{font-size:11px;padding:5px 11px;font-weight:normal;color:var(--dim)}
+.btn.sm:hover{color:var(--text);border-color:#444}
+
+/* STATS */
+.shoe-stats{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:7px}
+.stat{padding:2px 9px;border:1px solid var(--border);border-radius:99px;font-size:10px;color:var(--dim)}
+.stat b{color:var(--text)}
+
+/* TAPE */
+.tape-wrap{padding:4px 7px;border:1px solid var(--border);border-radius:3px;
+  background:var(--surface);margin-bottom:8px;min-height:28px;
+  display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.tc{width:18px;height:18px;border-radius:2px;font-size:9px;font-weight:bold;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tc.B{background:#0d1f3a;color:var(--blue)}
+.tc.P{background:#2a0a0a;color:#f87171}
+.tc.T{background:#1a1a1a;color:#444}
+.tc.last{outline:2px solid var(--accent);outline-offset:1px}
+.tape-empty{font-size:10px;color:var(--dim)}
+
+/* SIGNAL BOX */
+.signal-box{padding:6px 10px;border:1px solid var(--border);border-radius:3px;
+  margin-bottom:8px;font-size:11px;background:var(--surface);
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sig-label{color:var(--dim);font-size:10px;letter-spacing:.06em}
+.sig-code{color:var(--gold);font-weight:bold}
+.sig-bet{padding:2px 8px;border-radius:2px;font-weight:bold;font-size:12px}
+.sig-bet.B{background:#0d1f3a;color:var(--blue)}
+.sig-bet.P{background:#2a0a0a;color:#f87171}
+.sig-unit{color:var(--dim);font-size:10px}
+.sig-empty{color:var(--dim);font-size:10px}
+
+/* Q10 TRACKER */
+.q10-bar{display:flex;gap:4px;align-items:center;justify-content:center;
+  margin-bottom:8px;flex-wrap:wrap}
+.q10-label{font-size:10px;color:var(--dim);letter-spacing:.05em}
+.cluster{width:32px;height:32px;border:1px solid var(--border);border-radius:3px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:10px;color:var(--dim);cursor:pointer;transition:.1s}
+.cluster b{font-size:13px;color:var(--text)}
+.cluster.active{border-color:var(--gold);background:rgba(200,168,75,.1)}
+.cluster.active b{color:var(--gold)}
+.cluster.won{border-color:var(--green);background:rgba(34,197,94,.08)}
+.cluster.won b{color:var(--green)}
+.cluster.lost{border-color:var(--red);background:rgba(239,68,68,.08)}
+.cluster.lost b{color:var(--red)}
+.cluster:hover{border-color:#444}
+.q10-result{display:flex;gap:3px}
+.q10-btn{padding:3px 8px;border:1px solid var(--border);border-radius:2px;
+  font-family:var(--font);font-size:10px;cursor:pointer;background:var(--surface);
+  color:var(--dim);transition:.1s}
+.q10-btn:hover{color:var(--text);border-color:#555}
+.q10-btn.W{border-color:var(--green);color:var(--green)}
+.q10-btn.L{border-color:var(--red);color:var(--red)}
+
+/* GRID */
+.grid-wrap{overflow-x:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:3px}
+table{border-collapse:collapse;font-size:11px}
+thead tr{background:var(--surface2)}
+th{padding:4px 6px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+  color:var(--dim);text-align:center;font-size:9px;letter-spacing:.06em;white-space:nowrap}
+th.s-head{min-width:36px}
+td{padding:3px 6px;border-bottom:1px solid #1a1e28;border-right:1px solid #1a1e28;
+  text-align:center;white-space:nowrap;font-size:11px}
+td.h-num{color:#2a3048;font-size:9px;background:var(--surface2)}
+td.bp-cell{font-weight:bold}
+td.bp-cell.B{color:var(--blue)}
+td.bp-cell.P{color:#f87171}
+td.s-col{font-size:9px;color:var(--dim)}
+td.s-col.W{color:var(--green)}
+td.s-col.L{color:var(--red)}
+td.val{font-weight:bold}
+td.val.pos{color:var(--green)}
+td.val.neg{color:var(--red)}
+td.val.zero{color:var(--gold)}
+td.val.closing{color:var(--gold);opacity:.8}   /* shows the ±4 value on close hand */
+td.val.cx{color:#2a2a2a}                        /* shows X next hand */
+td.val.spawn{background:rgba(200,168,75,.04)}
+td.empty-cell{color:#1a2030;font-size:9px}
+td.signal-cell{background:rgba(200,168,75,.06)}
+.grid-ph{padding:16px;text-align:center;font-size:10px;color:var(--dim)}
+
+/* SERIES STRIP */
+.series-strip{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;justify-content:center}
+.ss{padding:2px 7px;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--dim)}
+.ss.open{border-color:#1e3a1e;color:var(--green)}
+.ss.cx{border-color:#1e1e1e;color:#2a2a2a}
+
+/* DEBUG */
+.debug-bar{text-align:center}
+.dtog{font-size:10px;color:#2a3048;cursor:pointer}
+.dtog:hover{color:var(--dim)}
+#dlog{display:none;margin-top:5px;background:var(--surface);border:1px solid var(--border);
+  border-radius:3px;padding:7px;font-size:10px;color:var(--dim);max-height:200px;
+  overflow-y:auto;line-height:1.9}
+#dlog.open{display:block}
+.dl{padding:1px 0;border-bottom:1px solid #12151d}
+.dl.spawn{color:var(--gold)}.dl.cx{color:var(--red)}.dl.hd{color:#2a5a2a}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BP Sync Tracker</h1>
+  <div class="sub">BaccaratBlackbook · Manual-verified engine · v1.1 · balance rule ⚠ pending</div>
+</div>
+
+<div class="controls">
+  <button class="btn B" onclick="addHand('B')">B</button>
+  <button class="btn P" onclick="addHand('P')">P</button>
+  <button class="btn T" onclick="addHand('T')">TIE</button>
+  <button class="btn sm" onclick="undo()">↩ UNDO</button>
+  <button class="btn sm" onclick="newShoe()">NEW SHOE</button>
+</div>
+
+<div class="shoe-stats" id="shoeStats"><div class="stat">Hands <b>0</b></div></div>
+<div class="tape-wrap" id="tape"><span class="tape-empty">No hands yet</span></div>
+
+<!-- SIGNAL -->
+<div class="signal-box" id="signalBox">
+  <span class="sig-empty">Signal appears after pattern forms…</span>
+</div>
+
+<!-- Q10 CLUSTER TRACKER -->
+<div class="q10-bar">
+  <span class="q10-label">Q10 CLUSTER:</span>
+  <div class="cluster" id="cl1" title="Cluster 1 — 1 unit"><b>1</b><span>unit</span></div>
+  <div class="cluster" id="cl2" title="Cluster 2 — 2 units"><b>2</b><span>units</span></div>
+  <div class="cluster" id="cl3" title="Cluster 3 — 3 units"><b>3</b><span>units</span></div>
+  <div class="cluster" id="cl4" title="Cluster 4 — 4 units"><b>4</b><span>units</span></div>
+  <div class="q10-result">
+    <button class="q10-btn W" onclick="logCluster('W')">W</button>
+    <button class="q10-btn L" onclick="logCluster('L')">L</button>
+    <button class="q10-btn" onclick="resetQ10()">↺</button>
+  </div>
+</div>
+
+<div class="grid-wrap">
+  <div class="grid-ph" id="ph">Grid appears after first hand</div>
+  <table id="grid" style="display:none"></table>
+</div>
+
+<div class="series-strip" id="strip"></div>
+
+<div class="debug-bar">
+  <span class="dtog" onclick="toggleLog()">▸ engine log</span>
+  <div id="dlog"></div>
+</div>
+
+<script>
+/* ═══ STATE ═══ */
+let hands=[], series=[], seriesCount=0;
+let lastBP=null, bpCount=0;
+let elog=[];
+let q10={cluster:1, history:[]};  // Q10 betting tracker
+
+// Per-hand bet tracking: {bpIdx, side:'B'|'P', units, result:'W'|'L'|null, signalCode}
+let bets=[];
+
+/* ═══ FACTORY ═══ */
+function mkS(initVal, spawnHand){
+  seriesCount++;
+  return{
+    id:seriesCount,
+    value:initVal,
+    initValue:initVal,
+    spawnHand,          // bpIdx when born
+    firstDeltaDone:false,  // has it received any delta yet?
+    closed:false,
+    closeVal:null,      // value when it closed (±4)
+    snap:{},            // snap[bpIdx] = value displayed at that hand
+  };
+}
+
+/* ═══ ENGINE ═══
+   Rules confirmed from BaccaratBlackbook manual:
+   H1 → spawn S1=+1, S2=−1
+   H2 → ALWAYS spawn S3=+1, S4=−1 (regardless of chop/streak)
+   Chop = +1 delta, Streak = −1 delta
+   Newly spawned series SKIP delta on spawn hand
+   Non-S1/S2: first delta brings series to 0 → spawn same-sign child
+   −4 close → spawn +1 rescue
+   +4 close → no spawn
+   Ties ignored
+   Display: show ±4 value on close hand, X on next hand
+═══════════════════ */
+function processHand(outcome, bi){
+  const log=[];
+
+  /* H1 ── spawn S1=+1, S2=−1 */
+  if(lastBP===null){
+    const s1=mkS(+1,bi); s1.snap[bi]=+1; series.push(s1);
+    const s2=mkS(-1,bi); s2.snap[bi]=-1; series.push(s2);
+    log.push(`H${bi} [${outcome}] FIRST → S1=+1, S2=−1`);
+    lastBP=outcome; elog.push(...log,'─'); return;
+  }
+
+  const isChop=outcome!==lastBP;
+  const delta=isChop?+1:-1;
+  log.push(`H${bi} [${outcome}] ${isChop?'CHOP':'STREAK'} Δ${delta>0?'+':''}${delta}`);
+
+  const rescueSpawns=[];
+  const zeroSpawns=[];
+
+  /* Apply delta to all EXISTING open series (skip spawn-hand series) */
+  for(const s of series){
+    if(s.closed) continue;
+    if(s.spawnHand===bi){
+      // Born this hand: record initial snap, skip delta
+      log.push(`  S${s.id} [born H${bi}] = ${s.value>0?'+':''}${s.value} (skip delta)`);
+      continue;
+    }
+
+    const wasFirst=!s.firstDeltaDone;
+    s.value+=delta;
+    s.firstDeltaDone=true;
+    s.snap[bi]=s.value;
+
+    /* −4 close → spawn rescue +1 */
+    if(s.value<=-4){
+      s.closed=true; s.closeVal=s.value;
+      rescueSpawns.push(bi);
+      log.push(`  S${s.id}=−4 ✕ close + rescue +1 queued`); continue;
+    }
+
+    /* +4 close → no spawn */
+    if(s.value>=4){
+      s.closed=true; s.closeVal=s.value;
+      log.push(`  S${s.id}=+4 ✕ close (no spawn)`); continue;
+    }
+
+    /* First delta brings to 0 → spawn same-sign child (except S1, S2) */
+    if(wasFirst && s.value===0 && s.id!==1 && s.id!==2){
+      const childVal=s.initValue>0?+1:-1;
+      zeroSpawns.push({val:childVal, hand:bi});
+      log.push(`  S${s.id}→0 (first delta) → spawn ${childVal>0?'+':''}${childVal} queued`);
+    } else {
+      log.push(`  S${s.id}=${s.value>0?'+':''}${s.value}`);
+    }
+  }
+
+  /* H2: ALWAYS spawn S3=+1, S4=−1 */
+  if(bi===2){
+    const s3=mkS(+1,bi); s3.snap[bi]=+1; series.push(s3);
+    const s4=mkS(-1,bi); s4.snap[bi]=-1; series.push(s4);
+    log.push(`  H2 → S3=+1, S4=−1 (always, active H3+)`);
+  }
+
+  /* Execute rescue spawns */
+  for(const h of rescueSpawns){
+    const ns=mkS(+1,h); ns.snap[h]=+1; series.push(ns);
+    log.push(`  rescue → S${ns.id}=+1`);
+  }
+
+  /* Execute zero-cross spawns */
+  for(const z of zeroSpawns){
+    const ns=mkS(z.val,z.hand); ns.snap[z.hand]=z.val; series.push(ns);
+    log.push(`  zero-cross → S${ns.id}=${z.val>0?'+':''}${z.val}`);
+  }
+
+  /* ─ PLACEHOLDER: ROW BALANCE RULE ─────────────────────────────
+     Observed: S5@H3=+1, S6@H6=+1, S7@H13=−1, S8@H14=−1
+     Pattern: if row has more positives → spawn −1 (to balance)
+              if row has more negatives → spawn +1 (to balance)
+     Ignores BP outcome entirely. Trigger condition TBC.
+     ⚠ Awaiting author confirmation before finalising.
+  ────────────────────────────────────────────────────────────── */
+  if(bi > 2){
+    // Snapshot the row AFTER all other spawns are settled
+    const openNow=series.filter(s=>!s.closed && s.spawnHand<=bi);
+    const posCount=openNow.filter(s=>(s.snap[bi]??s.value)>0).length;
+    const negCount=openNow.filter(s=>(s.snap[bi]??s.value)<0).length;
+    if(posCount !== negCount){
+      const spawnVal=posCount>negCount ? -1 : +1;
+      const ns=mkS(spawnVal,bi);
+      ns.snap[bi]=spawnVal;
+      ns.isBalance=true;   // flag so we can remove/adjust easily
+      series.push(ns);
+      log.push(`  BALANCE[?] ${posCount}+pos vs ${negCount}+neg → S${ns.id}=${spawnVal>0?'+':''}${spawnVal}  ⚠ pending confirm`);
+    }
+  }
+
+  lastBP=outcome;
+  elog.push(...log,'─');
+}
+
+/* ═══ SIGNAL DETECTION ═══ */
+function detectSignals(){
+  if(bpCount<3) return[];
+  const signals=[];
+  const bpHands=hands.filter(h=>h.outcome!=='T');
+
+  /* TR5: 5+ consecutive streaks */
+  let streakRun=0;
+  for(let i=bpHands.length-1;i>=1;i--){
+    if(bpHands[i].outcome===bpHands[i-1].outcome) streakRun++;
+    else break;
+  }
+  if(streakRun>=5){
+    const side=lastBP;
+    signals.push({code:'TR5',name:'Rule of 5 (Streak)',side,reason:`${streakRun} streaks in a row`});
+  }
+
+  /* TR3: 3+ consecutive chops */
+  let chopRun=0;
+  for(let i=bpHands.length-1;i>=1;i--){
+    if(bpHands[i].outcome!==bpHands[i-1].outcome) chopRun++;
+    else break;
+  }
+  if(chopRun>=3){
+    const side=lastBP==='B'?'P':'B';  // next chop = opposite of last
+    signals.push({code:'TR3',name:'Rule of 3 (Chop)',side,reason:`${chopRun} chops in a row`});
+  }
+
+  /* Scan columns for Neutral (1 0 1 0 1) and Terrible Two's (1 2 1 2 1) */
+  for(const s of series){
+    if(s.closed) continue;
+    // Build recent history for this series
+    const hist=[];
+    const bpH=hands.filter(h=>h.outcome!=='T');
+    for(let i=0;i<bpH.length;i++){
+      const bi=i+1;
+      if(s.spawnHand>bi) continue;
+      if(s.snap[bi]!==undefined) hist.push(s.snap[bi]);
+    }
+    if(hist.length<5) continue;
+    const last5=hist.slice(-5);
+    const cur=hist[hist.length-1];
+
+    // Neutral: alternates 1 0 1 0 1 or -1 0 -1 0 -1
+    const isNeutral=(a)=>{
+      if(Math.abs(a[0])===1&&a[1]===0&&Math.abs(a[2])===1&&a[3]===0&&Math.abs(a[4])===1
+        &&Math.sign(a[0])===Math.sign(a[2])&&Math.sign(a[2])===Math.sign(a[4])) return true;
+      return false;
+    };
+    if(isNeutral(last5)){
+      // cur should be ±1, bet to bring it to 0 next hand
+      // to get 0 from +1 we need -1 delta (streak = same as last)
+      // to get 0 from -1 we need +1 delta (chop = opposite of last)
+      const needDelta=cur>0?-1:+1;
+      const side=needDelta===-1?lastBP:(lastBP==='B'?'P':'B');
+      signals.push({code:'NEUTRAL',name:'Neutral (1 0 1 0 1)',side,
+        reason:`S${s.id} shows ${last5.join(' ')}, target 0`,col:s.id});
+    }
+
+    // Terrible Two's: 1 2 1 2 1 or -1 -2 -1 -2 -1
+    const isTerribleTwos=(a)=>{
+      if(Math.abs(a[0])===1&&Math.abs(a[1])===2&&Math.abs(a[2])===1&&Math.abs(a[3])===2&&Math.abs(a[4])===1
+        &&Math.sign(a[0])===Math.sign(a[1])) return true;
+      return false;
+    };
+    if(isTerribleTwos(last5)){
+      // cur=1, target 2 (chop if positive) or cur=-1, target -2 (streak if negative)
+      // cur=±1, next expected ±2 (continue pattern)
+      // ±2 = current + sign * 1
+      const sign=Math.sign(cur);
+      const target=cur+sign; // going from 1→2 or -1→-2
+      const needDelta=sign; // +1 to go from 1→2, -1 to go from -1→-2
+      const side=needDelta>0?(lastBP==='B'?'P':'B'):lastBP;
+      signals.push({code:'2x2',name:"Terrible Two's (1 2 1 2 1)",side,
+        reason:`S${s.id} shows ${last5.join(' ')}, target ${target>0?'+':''}${target}`,col:s.id});
+    }
+  }
+
+  return signals;
+}
+
+/* ═══ Q10 ═══ */
+function logCluster(result){
+  if(q10.cluster>4) return;
+  q10.history.push({cluster:q10.cluster,result});
+  if(result==='W') q10.cluster=Math.min(q10.cluster+1,4);
+  else q10.cluster=1;
+  renderQ10();
+}
+function resetQ10(){
+  q10={cluster:1,history:[]};
+  renderQ10();
+}
+
+/* ═══ HAND MGMT ═══ */
+function addHand(o){
+  let bi=null;
+  if(o!=='T'){ bpCount++; bi=bpCount; processHand(o,bi); }
+  hands.push({outcome:o,bpIdx:bi});
+  render();
+}
+function undo(){
+  if(!hands.length) return;
+  hands.pop();
+  series=[]; seriesCount=0; lastBP=null; bpCount=0; elog=[];
+  for(const h of hands){
+    if(h.outcome!=='T'){ bpCount++; processHand(h.outcome,bpCount); }
+  }
+  render();
+}
+function newShoe(){
+  if(!confirm('Clear shoe?')) return;
+  hands=[]; series=[]; seriesCount=0;
+  lastBP=null; bpCount=0; elog=[]; bets=[];
+  q10={cluster:1,history:[]};
+  render();
+}
+
+/* ═══ RENDER ═══ */
+function render(){
+  renderStats(); renderTape(); renderSignal(); renderQ10(); renderGrid(); renderStrip(); renderLog();
+}
+
+function renderStats(){
+  const B=hands.filter(h=>h.outcome==='B').length;
+  const P=hands.filter(h=>h.outcome==='P').length;
+  const T=hands.filter(h=>h.outcome==='T').length;
+  document.getElementById('shoeStats').innerHTML=
+    `<div class="stat">Hands <b>${hands.length}</b></div>`+
+    `<div class="stat">B <b>${B}</b></div><div class="stat">P <b>${P}</b></div>`+
+    `<div class="stat">T <b>${T}</b></div>`+
+    `<div class="stat">Series <b>${series.length}</b> (<b style="color:var(--green)">${series.filter(s=>!s.closed).length}</b> open)</div>`;
+}
+
+function renderTape(){
+  const el=document.getElementById('tape');
+  el.innerHTML=!hands.length
+    ?'<span class="tape-empty">No hands yet</span>'
+    :hands.map((h,i)=>`<div class="tc ${h.outcome}${i===hands.length-1?' last':''}">${h.outcome}</div>`).join('');
+}
+
+function renderSignal(){
+  const box=document.getElementById('signalBox');
+  const sigs=detectSignals();
+  if(!sigs.length){
+    box.innerHTML='<span class="sig-empty">No signal yet — watching for codes…</span>';
+    return;
+  }
+  // Show all signals
+  box.innerHTML=sigs.map(sig=>{
+    const unitDisplay=`${q10.cluster}u`;
+    return`<span class="sig-label">${sig.code}</span>`+
+      `<span class="sig-code">${sig.name}</span>`+
+      `<span class="sig-bet ${sig.side}">${sig.side}</span>`+
+      `<span class="sig-unit">${unitDisplay} · ${sig.reason}</span>`;
+  }).join('<span style="color:var(--border)"> | </span>');
+}
+
+function renderQ10(){
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('cl'+i);
+    const state=i<q10.cluster?'won':i===q10.cluster?'active':'';
+    el.className='cluster '+(state||'');
+  }
+}
+
+function renderGrid(){
+  const ph=document.getElementById('ph');
+  const tbl=document.getElementById('grid');
+  const bpH=hands.filter(h=>h.outcome!=='T');
+  if(!bpH.length){ph.style.display='';tbl.style.display='none';return;}
+  ph.style.display='none'; tbl.style.display='';
+
+  // Build header
+  let html='<thead><tr><th>H</th><th>BP</th>';
+  for(const s of series){
+    const st=s.closed?'✕':'○';
+    const sc=s.closed?'#2a2a2a':'#1e3a1e';
+    html+=`<th class="s-head">S${s.id}<br><span style="font-size:8px;color:${sc}">${st}</span></th>`;
+  }
+  html+='</tr></thead><tbody>';
+
+  for(let i=0;i<bpH.length;i++){
+    const h=bpH[i]; const bi=i+1;
+    html+=`<tr><td class="h-num">${bi}</td><td class="bp-cell ${h.outcome}">${h.outcome}</td>`;
+
+    for(const s of series){
+      if(s.spawnHand>bi){html+='<td class="empty-cell">·</td>';continue;}
+      const val=s.snap[bi];
+      if(val===undefined){html+='<td class="empty-cell">—</td>';continue;}
+
+      // Display logic: show value on close hand, X on next hand
+      const closedAtThisHand=s.closed && val===s.closeVal;
+      const xNextHand=s.closed && bi>s.spawnHand && val!==s.closeVal && !Object.keys(s.snap).map(Number).some(k=>k>bi && s.snap[k]===s.closeVal);
+
+      // Find which hand the series actually closed (the hand where closeVal was recorded)
+      const closeHand=s.closed ? Object.keys(s.snap).map(Number).find(k=>s.snap[k]===s.closeVal) : null;
+      const isCloseHand=s.closed && bi===closeHand;
+      const isPostClose=s.closed && closeHand && bi>closeHand;
+
+      let cls='val';
+      let txt;
+
+      if(isPostClose){
+        cls+=' cx';
+        txt='X';
+      } else if(isCloseHand){
+        cls+=' closing';
+        txt=`${val>0?'+':''}${val}`;
+      } else {
+        if(val>0) cls+=' pos';
+        else if(val<0) cls+=' neg';
+        else cls+=' zero';
+        txt=`${val>0?'+':''}${val}`;
+      }
+
+      if(s.spawnHand===bi) cls+=' spawn';
+      html+=`<td class="${cls}">${txt}</td>`;
+    }
+    html+='</tr>';
+  }
+
+  html+='</tbody>';
+  tbl.innerHTML=html;
+}
+
+function renderStrip(){
+  const el=document.getElementById('strip');
+  el.innerHTML=series.map(s=>{
+    const cls='ss '+(s.closed?'cx':'open');
+    const v=s.value;
+    return`<div class="${cls}">S${s.id}${s.closed?'✕':''} ${v>0?'+':''}${v}</div>`;
+  }).join('');
+}
+
+function renderLog(){
+  const dl=document.getElementById('dlog');
+  dl.innerHTML=elog.slice(-100).map(l=>{
+    if(l==='─') return'<div style="border-bottom:1px solid #1a1e28;margin:2px 0"></div>';
+    let cls='dl';
+    if(l.startsWith('H')) cls+=' hd';
+    else if(l.includes('spawn')||l.includes('rescue')||l.includes('zero')) cls+=' spawn';
+    else if(l.includes('✕')) cls+=' cx';
+    return`<div class="${cls}">${l}</div>`;
+  }).join('');
+  dl.scrollTop=dl.scrollHeight;
+}
+
+function toggleLog(){
+  const dl=document.getElementById('dlog');
+  const tog=document.querySelector('.dtog');
+  dl.classList.toggle('open');
+  tog.textContent=dl.classList.contains('open')?'▾ engine log':'▸ engine log';
+}
+
+render();
+</script>
+</body>
+</html>
