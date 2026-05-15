@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BP Sync Tracker</title>
+<style>
+/* ── TOKENS ── */
+:root{
+  --bg:#0c0c0e;
+  --surface:#111115;
+  --surface2:#18181e;
+  --surface3:#1e1e26;
+  --border:#26262f;
+  --border2:#2e2e3a;
+  --text:#dde1f0;
+  --dim:#5a5f7a;
+  --dim2:#3a3d52;
+  --accent:#c8a84b;
+  --accent-dim:rgba(200,168,75,.12);
+  --player:#3b82f6;
+  --player-dim:rgba(59,130,246,.13);
+  --banker:#ef4444;
+  --banker-dim:rgba(239,68,68,.13);
+  --tie:#22c55e;
+  --tie-dim:rgba(34,197,94,.10);
+  --win:#22c55e;
+  --loss:#ef4444;
+  --gold:#f59e0b;
+  --font:'SF Mono','Fira Code','Courier New',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  display:grid;
+  grid-template-rows:48px 1fr;
+  grid-template-columns:110px 1fr 260px;
+  grid-template-areas:
+    "header header header"
+    "left   main   right";
+}
+
+/* ── HEADER ── */
+header{
+  grid-area:header;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:0 14px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.brand{
+  font-size:16px;
+  font-weight:700;
+  letter-spacing:.12em;
+  color:var(--accent);
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.tagline{
+  font-size:11px;
+  color:var(--dim);
+  letter-spacing:.05em;
+  flex:1;
+}
+.hdr-controls{display:flex;gap:6px;align-items:center}
+.hdr-count{
+  font-size:12px;color:var(--dim);
+  padding:4px 10px;border:1px solid var(--border2);
+  border-radius:4px;background:var(--surface2);
+  white-space:nowrap;
+}
+.hdr-count b{color:var(--text)}
+.hdr-btn{
+  padding:5px 11px;
+  border:1px solid var(--border2);
+  border-radius:4px;
+  background:var(--surface2);
+  color:var(--dim);
+  font-size:11px;
+  cursor:pointer;
+  transition:.12s;
+  white-space:nowrap;
+  font-family:var(--sans);
+}
+.hdr-btn:hover{border-color:#444;color:var(--text)}
+.hdr-btn.danger{border-color:#3a1515;color:#b84444}
+.hdr-btn.danger:hover{border-color:var(--banker);color:var(--banker)}
+
+/* ── LEFT PANEL ── */
+.left-panel{
+  grid-area:left;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  border-right:1px solid var(--border);
+  background:var(--surface);
+  overflow-y:auto;
+}
+.panel-label{
+  font-size:9px;
+  letter-spacing:.12em;
+  color:var(--dim);
+  text-transform:uppercase;
+  padding:8px 10px 4px;
+}
+.outcome-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  margin:3px 8px;
+  padding:10px 0;
+  border-radius:6px;
+  border:1.5px solid var(--border2);
+  background:var(--surface2);
+  cursor:pointer;
+  transition:.12s;
+  user-select:none;
+}
+.outcome-btn:active{transform:scale(.97)}
+.outcome-btn .big-letter{
+  font-size:28px;
+  font-weight:700;
+  line-height:1;
+  font-family:var(--sans);
+}
+.outcome-btn .small-label{
+  font-size:9px;
+  letter-spacing:.08em;
+  opacity:.7;
+}
+.outcome-btn.P{border-color:var(--player-dim);color:var(--player)}
+.outcome-btn.P:hover{border-color:var(--player);background:var(--player-dim)}
+.outcome-btn.T{border-color:var(--tie-dim);color:var(--tie)}
+.outcome-btn.T:hover{border-color:var(--tie);background:var(--tie-dim)}
+.outcome-btn.B{border-color:var(--banker-dim);color:var(--banker)}
+.outcome-btn.B:hover{border-color:var(--banker);background:var(--banker-dim)}
+
+.panel-divider{height:1px;background:var(--border);margin:6px 0}
+
+.result-row{display:flex;gap:6px;margin:3px 8px}
+.result-btn{
+  flex:1;
+  padding:7px 0;
+  border-radius:5px;
+  border:1.5px solid var(--border2);
+  background:var(--surface2);
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.12s;
+  font-family:var(--sans);
+}
+.result-btn:active{transform:scale(.97)}
+.result-btn.W{color:var(--win);border-color:rgba(34,197,94,.2)}
+.result-btn.W:hover{border-color:var(--win);background:rgba(34,197,94,.08)}
+.result-btn.L{color:var(--loss);border-color:rgba(239,68,68,.2)}
+.result-btn.L:hover{border-color:var(--loss);background:rgba(239,68,68,.08)}
+.result-btn.disabled{opacity:.35;cursor:not-allowed}
+
+.shoe-record{
+  margin:4px 8px;
+  padding:7px 9px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:5px;
+}
+.shoe-record .sr-label{font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.shoe-record .sr-counts{font-size:13px;font-family:var(--font)}
+.sr-w{color:var(--win);font-weight:700}
+.sr-sep{color:var(--dim);margin:0 3px}
+.sr-l{color:var(--loss);font-weight:700}
+
+/* ── MAIN AREA ── */
+.main-area{
+  grid-area:main;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.col-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+  flex-shrink:0;
+  overflow-x:auto;
+}
+.col-tab{
+  padding:8px 10px;
+  font-size:10px;
+  letter-spacing:.1em;
+  color:var(--dim);
+  border-right:1px solid var(--border);
+  text-align:center;
+  white-space:nowrap;
+  min-width:34px;
+  text-transform:uppercase;
+}
+.col-tab.fixed{min-width:28px;background:var(--surface2)}
+.col-tab.series-tab{
+  min-width:38px;
+  font-family:var(--font);
+  font-size:11px;
+}
+.col-tab.series-tab.open-tab{color:var(--accent)}
+.col-tab.series-tab.closed-tab{color:var(--dim2)}
+
+.grid-scroll{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:auto;
+}
+.grid-placeholder{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  font-size:13px;
+  color:var(--dim);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+table{
+  border-collapse:collapse;
+  font-size:11.5px;
+  font-family:var(--font);
+  width:100%;
+}
+thead{position:sticky;top:0;z-index:2}
+thead th{
+  padding:5px 8px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  color:var(--dim);
+  text-align:center;
+  font-size:10px;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+tbody tr:nth-child(even){background:rgba(255,255,255,.012)}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td{
+  padding:4px 8px;
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  text-align:center;
+  white-space:nowrap;
+}
+td.td-hand{
+  color:var(--dim2);
+  font-size:10px;
+  background:var(--surface2);
+  min-width:28px;
+}
+td.td-bp{
+  font-weight:700;
+  font-size:12px;
+  min-width:26px;
+}
+td.td-bp.B{color:var(--banker)}
+td.td-bp.P{color:var(--player)}
+td.td-bp.T{color:var(--tie)}
+td.td-s{
+  font-size:10px;
+  min-width:28px;
+  color:var(--dim);
+}
+td.td-s.W-cell{color:var(--win);font-weight:600}
+td.td-s.L-cell{color:var(--loss);font-weight:600}
+td.sv{font-weight:600;min-width:38px}
+td.sv.pos{color:var(--player)}
+td.sv.neg{color:var(--banker)}
+td.sv.zero{color:var(--gold);font-weight:700}
+td.sv.closing{color:var(--gold);opacity:.75}
+td.sv.cx{color:var(--dim2);letter-spacing:.1em}
+td.sv.spawn-hi{background:rgba(200,168,75,.05)}
+td.sv.signal-hi{background:rgba(200,168,75,.08);outline:1px solid rgba(200,168,75,.2) inset}
+td.sv.empty{color:var(--dim2);font-size:9px}
+
+/* ── RIGHT PANEL ── */
+.right-panel{
+  grid-area:right;
+  border-left:1px solid var(--border);
+  background:var(--surface);
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+.rp-section{
+  border-bottom:1px solid var(--border);
+  padding:10px 12px;
+}
+.rp-section-label{
+  font-size:9px;
+  letter-spacing:.14em;
+  color:var(--dim);
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+/* SIGNAL CARD */
+.sig-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 9px;
+  border-radius:99px;
+  font-size:10px;
+  letter-spacing:.1em;
+  font-weight:600;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.sig-badge.watching{background:var(--surface3);color:var(--dim);border:1px solid var(--border2)}
+.sig-badge.active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,168,75,.3)}
+.sig-badge.bet{background:rgba(34,197,94,.1);color:var(--win);border:1px solid rgba(34,197,94,.3)}
+
+.sig-main{
+  font-size:13px;
+  color:var(--text);
+  margin-bottom:4px;
+  font-weight:500;
+}
+.sig-sub{font-size:11px;color:var(--dim);line-height:1.5}
+
+.sig-bet-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:8px;
+}
+.sig-side{
+  font-size:20px;
+  font-weight:700;
+  padding:4px 14px;
+  border-radius:5px;
+}
+.sig-side.B{background:var(--banker-dim);color:var(--banker);border:1px solid rgba(239,68,68,.25)}
+.sig-side.P{background:var(--player-dim);color:var(--player);border:1px solid rgba(59,130,246,.25)}
+.sig-units{
+  font-size:11px;
+  color:var(--dim);
+  line-height:1.5;
+}
+.sig-units b{color:var(--accent);font-size:16px}
+
+/* SYNC METER */
+.sync-count-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:12px;
+  margin-bottom:7px;
+}
+.sync-num{color:var(--accent);font-weight:700;font-size:16px}
+.sync-bar-wrap{height:5px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.sync-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:99px;transition:.4s}
+.sync-desc{font-size:10px;color:var(--dim)}
+
+/* STATS */
+.stats-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.stat-cell{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:5px;
+  padding:7px 9px;
+}
+.stat-num{
+  font-size:22px;
+  font-weight:700;
+  font-family:var(--font);
+  line-height:1;
+  margin-bottom:2px;
+}
+.stat-lbl{font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.stat-num.win-col{color:var(--win)}
+.stat-num.loss-col{color:var(--loss)}
+.stat-num.bet-col{color:var(--player)}
+.stat-num.rate-col{color:var(--accent)}
+
+/* RECENT RESULTS */
+.recent-list{display:flex;flex-direction:column;gap:4px}
+.recent-item{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:11px;
+  color:var(--dim);
+}
+.recent-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.recent-dot.W{background:var(--win)}
+.recent-dot.L{background:var(--loss)}
+
+/* Q10 CLUSTER */
+.cluster-row{
+  display:flex;
+  gap:4px;
+  margin-bottom:6px;
+}
+.cluster-pip{
+  flex:1;
+  padding:5px 2px;
+  border:1px solid var(--border2);
+  border-radius:4px;
+  background:var(--surface2);
+  text-align:center;
+  font-size:9px;
+  color:var(--dim);
+  transition:.15s;
+}
+.cluster-pip b{display:block;font-size:15px;font-family:var(--font);margin-bottom:1px}
+.cluster-pip.active-pip{border-color:rgba(200,168,75,.5);background:var(--accent-dim)}
+.cluster-pip.active-pip b{color:var(--accent)}
+.cluster-pip.won-pip{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06)}
+.cluster-pip.won-pip b{color:var(--win)}
+.cluster-pip.lost-pip{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)}
+.cluster-pip.lost-pip b{color:var(--loss)}
+.q10-actions{display:flex;gap:4px}
+.q10-btn{
+  flex:1;
+  padding:5px 0;
+  border:1px solid var(--border2);
+  border-radius:4px;
+  background:var(--surface2);
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:var(--sans);
+  color:var(--dim);
+  transition:.12s;
+}
+.q10-btn:hover{color:var(--text);border-color:#444}
+.q10-btn.qW{color:var(--win);border-color:rgba(34,197,94,.2)}
+.q10-btn.qW:hover{border-color:var(--win);background:rgba(34,197,94,.06)}
+.q10-btn.qL{color:var(--loss);border-color:rgba(239,68,68,.2)}
+.q10-btn.qL:hover{border-color:var(--loss);background:rgba(239,68,68,.06)}
+.q10-btn.qR{font-size:13px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div>
+    <div class="brand">BP Sync Tracker</div>
+    <div class="tagline">synchronized oscillation · one bet · exit</div>
+  </div>
+  <div class="hdr-controls">
+    <span class="hdr-count">Hands <b id="handCount">0</b></span>
+    <button class="hdr-btn" onclick="undo()">↩ Undo</button>
+    <button class="hdr-btn danger" onclick="newShoe()">✕ New Shoe</button>
+    <button class="hdr-btn" onclick="exportCSV()">↓ CSV</button>
+  </div>
+</header>
+
+<!-- ── LEFT PANEL ── -->
+<div class="left-panel">
+  <div class="panel-label">Outcome</div>
+  <div class="outcome-btn P" onclick="addHand('P')">
+    <span class="big-letter">P</span>
+    <span class="small-label">Player</span>
+  </div>
+  <div class="outcome-btn T" onclick="addHand('T')">
+    <span class="big-letter">T</span>
+    <span class="small-label">Tie</span>
+  </div>
+  <div class="outcome-btn B" onclick="addHand('B')">
+    <span class="big-letter">B</span>
+    <span class="small-label">Banker</span>
+  </div>
+
+  <div class="panel-divider"></div>
+  <div class="panel-label">Result</div>
+  <div class="result-row">
+    <button class="result-btn W" id="wBtn" onclick="logBetResult('W')">W</button>
+    <button class="result-btn L" id="lBtn" onclick="logBetResult('L')">L</button>
+  </div>
+
+  <div style="padding:4px 8px">
+    <div class="shoe-record">
+      <div class="sr-label">Shoe record</div>
+      <div class="sr-counts">
+        <span class="sr-w" id="srW">0</span><span class="sr-sep">W</span>
+        <span class="sr-l" id="srL">0</span><span class="sr-sep">L</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN AREA ── -->
+<div class="main-area">
+  <div class="col-tabs" id="colTabs">
+    <div class="col-tab fixed">#</div>
+    <div class="col-tab fixed">BP</div>
+    <div class="col-tab fixed">S</div>
+  </div>
+  <div class="grid-scroll" id="gridScroll">
+    <div class="grid-placeholder" id="gridPh">ENTER OUTCOMES TO BEGIN</div>
+    <table id="grid" style="display:none">
+      <thead id="gridHead"></thead>
+      <tbody id="gridBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── RIGHT PANEL ── -->
+<div class="right-panel">
+
+  <div class="rp-section">
+    <div class="rp-section-label">Signal</div>
+    <div class="sig-badge watching" id="sigBadge">WATCHING</div>
+    <div class="sig-main" id="sigMain">Enter outcomes</div>
+    <div class="sig-sub" id="sigSub">Need 4+ hands of sync</div>
+    <div class="sig-bet-row" id="sigBetRow" style="display:none">
+      <div class="sig-side" id="sigSide"></div>
+      <div class="sig-units" id="sigUnits"></div>
+    </div>
+  </div>
+
+  <div class="rp-section">
+    <div class="rp-section-label">Sync Meter</div>
+    <div class="sync-count-row">
+      <span style="font-size:11px;color:var(--dim)">Columns in sync</span>
+      <span class="sync-num" id="syncNum">0</span>
+    </div>
+    <div class="sync-bar-wrap"><div class="sync-bar-fill" id="syncBar" style="width:0%"></div></div>
+    <div class="sync-desc" id="syncDesc">No sync detected yet</div>
+  </div>
+
+  <div class="rp-section">
+    <div class="rp-section-label">Q10 Cluster</div>
+    <div class="cluster-row" id="clusterRow">
+      <div class="cluster-pip" id="cp1"><b>1</b>unit</div>
+      <div class="cluster-pip" id="cp2"><b>2</b>units</div>
+      <div class="cluster-pip" id="cp3"><b>3</b>units</div>
+      <div class="cluster-pip" id="cp4"><b>4</b>units</div>
+    </div>
+    <div class="q10-actions">
+      <button class="q10-btn qW" onclick="advanceQ10('W')">W +</button>
+      <button class="q10-btn qL" onclick="advanceQ10('L')">L reset</button>
+      <button class="q10-btn qR" onclick="resetQ10()">↺</button>
+    </div>
+  </div>
+
+  <div class="rp-section">
+    <div class="rp-section-label">Session Stats</div>
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-num win-col" id="stWins">0</div>
+        <div class="stat-lbl">Wins</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num loss-col" id="stLosses">0</div>
+        <div class="stat-lbl">Losses</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num rate-col" id="stRate">—</div>
+        <div class="stat-lbl">Win Rate</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num bet-col" id="stBets">0</div>
+        <div class="stat-lbl">Bets</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rp-section" style="border-bottom:none;flex:1">
+    <div class="rp-section-label">Recent Results</div>
+    <div class="recent-list" id="recentList">
+      <span style="font-size:11px;color:var(--dim)">None yet</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let hands=[], series=[], seriesCount=0;
+let lastBP=null, bpCount=0;
+let elog=[];
+let stats={wins:0, losses:0, bets:0};
+let q10={cluster:1, history:[]};
+let recentResults=[];  // {code:'NEUTRAL', side:'B', units:1, result:'W'|'L'}
+let pendingBet=null;   // signal waiting for W/L
+
+/* ══════════════════════════════════════════════
+   ENGINE — confirmed from BaccaratBlackbook
+══════════════════════════════════════════════ */
+function mkS(initVal, spawnHand){
+  seriesCount++;
+  return{id:seriesCount,value:initVal,initValue:initVal,
+    spawnHand,firstDeltaDone:false,
+    closed:false,closeVal:null,snap:{}};
+}
+
+function processHand(outcome, bi){
+  const log=[];
+
+  /* H1 → S1=+1, S2=−1 */
+  if(lastBP===null){
+    const s1=mkS(+1,bi); s1.snap[bi]=+1; series.push(s1);
+    const s2=mkS(-1,bi); s2.snap[bi]=-1; series.push(s2);
+    log.push(`H${bi} [${outcome}] FIRST → S1=+1 S2=−1`);
+    lastBP=outcome; elog.push(...log,'─'); return;
+  }
+
+  const isChop=outcome!==lastBP;
+  const delta=isChop?+1:-1;
+  log.push(`H${bi} [${outcome}] ${isChop?'CHOP':'STREAK'} Δ${delta>0?'+':''}${delta}`);
+
+  const rescueQ=[], zeroQ=[];
+
+  for(const s of series){
+    if(s.closed) continue;
+    if(s.spawnHand===bi){
+      log.push(`  S${s.id} born=${s.value>0?'+':''}${s.value} (skip delta)`);
+      continue;
+    }
+    const wasFirst=!s.firstDeltaDone;
+    s.value+=delta; s.firstDeltaDone=true; s.snap[bi]=s.value;
+
+    if(s.value<=-4){
+      s.closed=true; s.closeVal=s.value; rescueQ.push(bi);
+      log.push(`  S${s.id}=−4 ✕ → rescue +1`); continue;
+    }
+    if(s.value>=4){
+      s.closed=true; s.closeVal=s.value;
+      log.push(`  S${s.id}=+4 ✕`); continue;
+    }
+    if(wasFirst && s.value===0 && s.id!==1 && s.id!==2){
+      const cv=s.initValue>0?+1:-1;
+      zeroQ.push({val:cv,hand:bi});
+      log.push(`  S${s.id}→0 first-delta → spawn ${cv>0?'+':''}${cv}`);
+    } else {
+      log.push(`  S${s.id}=${s.value>0?'+':''}${s.value}`);
+    }
+  }
+
+  /* H2 ALWAYS spawns S3=+1, S4=−1 */
+  if(bi===2){
+    const s3=mkS(+1,bi); s3.snap[bi]=+1; series.push(s3);
+    const s4=mkS(-1,bi); s4.snap[bi]=-1; series.push(s4);
+    log.push(`  H2 → S3=+1 S4=−1`);
+  }
+
+  for(const h of rescueQ){ const ns=mkS(+1,h); ns.snap[h]=+1; series.push(ns); log.push(`  rescue S${ns.id}=+1`); }
+  for(const z of zeroQ){   const ns=mkS(z.val,z.hand); ns.snap[z.hand]=z.val; series.push(ns); log.push(`  zero-cross S${ns.id}=${z.val>0?'+':''}${z.val}`); }
+
+  /* BALANCE RULE — DISABLED pending author confirmation
+     Do not re-enable until trigger condition is confirmed.
+     Observed cases: S5@H3=+1, S6@H6=+1, S7@H13=−1, S8@H14=−1
+     Current hypothesis: spawn opposite of row majority (ignores BP outcome)
+     Problem: fires every hand → runaway column explosion → WRONG
+  */
+
+  lastBP=outcome;
+  elog.push(...log,'─');
+}
+
+/* ══════════════════════════════════════════════
+   SIGNAL DETECTION
+══════════════════════════════════════════════ */
+function buildColHistory(s){
+  const hist=[];
+  const bpH=hands.filter(h=>h.outcome!=='T');
+  for(let i=0;i<bpH.length;i++){
+    const bi=i+1;
+    if(s.spawnHand>bi) continue;
+    if(s.snap[bi]!==undefined) hist.push(s.snap[bi]);
+  }
+  return hist;
+}
+
+function detectSignals(){
+  if(bpCount<3) return{signals:[],syncCount:0};
+  const signals=[];
+  const bpH=hands.filter(h=>h.outcome!=='T');
+
+  // TR5: 5+ consecutive same outcomes = 4+ same-outcome transitions
+  // Book: "PPPPP" = 5 hands = 4 transitions. Fire when sRun>=4.
+  let sRun=0;
+  for(let i=bpH.length-1;i>=1;i--){ if(bpH[i].outcome===bpH[i-1].outcome) sRun++; else break; }
+  if(sRun>=4) signals.push({code:'TR5',name:'Rule of 5 — Streak',side:lastBP,units:q10.cluster,
+    reason:`${sRun+1} in a row · bet ${lastBP} continues`});
+
+  // TR3: 3 alternating outcomes = 2+ chop transitions (P B P = 2 transitions)
+  // Book: "P B P" = 3 hands = 2 transitions. Fire when cRun>=2.
+  let cRun=0;
+  for(let i=bpH.length-1;i>=1;i--){ if(bpH[i].outcome!==bpH[i-1].outcome) cRun++; else break; }
+  if(cRun>=2){ const side=lastBP==='B'?'P':'B';
+    signals.push({code:'TR3',name:'Rule of 3 — Chop',side,units:q10.cluster,
+      reason:`${cRun+1} alternating · bet ${side} continues`}); }
+
+  let syncCount=0;
+  for(const s of series){
+    if(s.closed) continue;
+    const hist=buildColHistory(s);
+    if(hist.length<5) continue;
+    const l5=hist.slice(-5);
+    const cur=hist[hist.length-1];
+
+    // Neutral (+/-) 1 0 1 0 1
+    // Rule: absolute values alternate |1|, 0, |1|, 0, |1| — sign can mix
+    // Bet to achieve 0 on next hand
+    const isN=()=>
+      Math.abs(l5[0])===1 && l5[1]===0 &&
+      Math.abs(l5[2])===1 && l5[3]===0 &&
+      Math.abs(l5[4])===1;
+    if(isN()){
+      syncCount++;
+      // cur is ±1. To reach 0: need opposite delta.
+      // +1 → need -1 delta → streak → bet same as lastBP
+      // -1 → need +1 delta → chop → bet opposite of lastBP
+      const side=cur>0 ? lastBP : (lastBP==='B'?'P':'B');
+      signals.push({code:'NEUTRAL',name:'Neutral — 1 0 1 0 1',side,units:q10.cluster,
+        reason:`S${s.id}: ${l5.join(' ')} → bet ${side} to reach 0`,col:s.id});
+    }
+
+    // Terrible Two's (+/-) 1 2 1 2 1
+    // Signs can mix — only absolute values matter for pattern detection
+    const isT2=()=>Math.abs(l5[0])===1&&Math.abs(l5[1])===2&&Math.abs(l5[2])===1&&Math.abs(l5[3])===2&&Math.abs(l5[4])===1;
+    if(isT2()){
+      syncCount++;
+      const sg=Math.sign(cur);
+      const side=sg>0?(lastBP==='B'?'P':'B'):lastBP;
+      signals.push({code:'2×2',name:"Terrible Two's",side,units:q10.cluster,
+        reason:`Col ${s.id} shows ${l5.join(' ')}`,col:s.id});
+    }
+  }
+
+  return{signals, syncCount};
+}
+
+/* ══════════════════════════════════════════════
+   HAND + BET MANAGEMENT
+══════════════════════════════════════════════ */
+function addHand(o){
+  let bi=null;
+  if(o!=='T'){ bpCount++; bi=bpCount; processHand(o,bi); }
+  hands.push({outcome:o,bpIdx:bi,betResult:null});
+  render();
+}
+
+function logBetResult(r){
+  // Apply to the most recent hand with no bet result yet
+  const last=hands.slice().reverse().find(h=>h.bpIdx&&h.betResult===null);
+  if(!last) return;
+  last.betResult=r;
+  if(r==='W'){stats.wins++;}else{stats.losses++;}
+  stats.bets++;
+  recentResults.unshift({hand:last.bpIdx, result:r});
+  if(recentResults.length>10) recentResults.pop();
+  render();
+}
+
+function undo(){
+  if(!hands.length) return;
+  const last=hands.pop();
+  if(last.betResult){ stats.bets--; if(last.betResult==='W') stats.wins--; else stats.losses--; recentResults.shift(); }
+  if(last.outcome!=='T'){
+    series=[]; seriesCount=0; lastBP=null; bpCount=0; elog=[];
+    for(const h of hands) if(h.outcome!=='T'){ bpCount++; processHand(h.outcome,bpCount); }
+  }
+  render();
+}
+
+function newShoe(){
+  if(!confirm('Clear all data?')) return;
+  hands=[]; series=[]; seriesCount=0; lastBP=null; bpCount=0;
+  elog=[]; stats={wins:0,losses:0,bets:0}; recentResults=[];
+  q10={cluster:1,history:[]};
+  render();
+}
+
+function advanceQ10(r){
+  q10.history.push({cluster:q10.cluster,result:r});
+  if(r==='W') q10.cluster=Math.min(q10.cluster+1,4);
+  else q10.cluster=1;
+  renderQ10();
+}
+function resetQ10(){ q10={cluster:1,history:[]}; renderQ10(); }
+
+function exportCSV(){
+  const bpH=hands.filter(h=>h.outcome!=='T');
+  let csv='Hand,Outcome,BetResult\n';
+  bpH.forEach((h,i)=>{ csv+=`${i+1},${h.outcome},${h.betResult||''}\n`; });
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='bp-tracker.csv'; a.click();
+}
+
+/* ══════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════ */
+function render(){
+  renderHeader();
+  renderGrid();
+  renderSignal();
+  renderQ10();
+  renderStats();
+  renderRecent();
+}
+
+function renderHeader(){
+  document.getElementById('handCount').textContent=hands.length;
+  document.getElementById('srW').textContent=stats.wins;
+  document.getElementById('srL').textContent=stats.losses;
+}
+
+function renderGrid(){
+  const ph=document.getElementById('gridPh');
+  const tbl=document.getElementById('grid');
+  const bpH=hands.filter(h=>h.outcome!=='T');
+  if(!bpH.length){ph.style.display='flex';tbl.style.display='none';renderColTabs();return;}
+  ph.style.display='none'; tbl.style.display='table';
+  renderColTabs();
+
+  // HEAD
+  let hh='<tr><th>#</th><th>BP</th><th>S</th>';
+  for(const s of series) hh+=`<th>S${s.id}</th>`;
+  hh+='</tr>';
+  document.getElementById('gridHead').innerHTML=hh;
+
+  // BODY
+  const {signals}=detectSignals();
+  const sigCols=new Set(signals.filter(s=>s.col).map(s=>s.col));
+
+  let rows='';
+  for(let i=0;i<bpH.length;i++){
+    const h=bpH[i]; const bi=i+1;
+    rows+=`<tr>`;
+    rows+=`<td class="td-hand">${bi}</td>`;
+    rows+=`<td class="td-bp ${h.outcome}">${h.outcome}</td>`;
+    const br=h.betResult||'';
+    rows+=`<td class="td-s${br?' '+(br+'-cell'):''}">` +(br||'·')+'</td>';
+
+    for(const s of series){
+      if(s.spawnHand>bi){rows+='<td class="sv empty">·</td>';continue;}
+      const val=s.snap[bi];
+      if(val===undefined){rows+='<td class="sv empty">—</td>';continue;}
+
+      // Find close hand
+      const closeHand=s.closed
+        ?Object.keys(s.snap).map(Number).find(k=>s.snap[k]===s.closeVal)
+        :null;
+      const isCloseHand=s.closed&&bi===closeHand;
+      const isPostClose=s.closed&&closeHand&&bi>closeHand;
+      const isSpawn=s.spawnHand===bi;
+      const isSigCol=sigCols.has(s.id);
+
+      let cls='sv';
+      let txt;
+      if(isPostClose){cls+=' cx';txt='X';}
+      else if(isCloseHand){cls+=' closing';txt=`${val>0?'+':''}${val}`;}
+      else{
+        cls+=val>0?' pos':val<0?' neg':' zero';
+        txt=`${val>0?'+':''}${val}`;
+      }
+      if(isSpawn) cls+=' spawn-hi';
+      if(isSigCol&&!isPostClose) cls+=' signal-hi';
+      rows+=`<td class="${cls}">${txt}</td>`;
+    }
+    rows+='</tr>';
+  }
+  document.getElementById('gridBody').innerHTML=rows;
+
+  // Scroll to bottom
+  const gs=document.getElementById('gridScroll');
+  gs.scrollTop=gs.scrollHeight;
+}
+
+function renderColTabs(){
+  const ct=document.getElementById('colTabs');
+  let tabs='<div class="col-tab fixed">#</div><div class="col-tab fixed">BP</div><div class="col-tab fixed">S</div>';
+  for(const s of series){
+    const cls=s.closed?'series-tab closed-tab':'series-tab open-tab';
+    tabs+=`<div class="col-tab ${cls}">S${s.id}</div>`;
+  }
+  ct.innerHTML=tabs;
+}
+
+function renderSignal(){
+  const badge=document.getElementById('sigBadge');
+  const main=document.getElementById('sigMain');
+  const sub=document.getElementById('sigSub');
+  const betRow=document.getElementById('sigBetRow');
+  const side=document.getElementById('sigSide');
+  const units=document.getElementById('sigUnits');
+  const syncN=document.getElementById('syncNum');
+  const syncB=document.getElementById('syncBar');
+  const syncD=document.getElementById('syncDesc');
+
+  const {signals,syncCount}=detectSignals();
+  const openSeries=series.filter(s=>!s.closed).length;
+
+  // Sync meter
+  syncN.textContent=syncCount;
+  syncB.style.width=Math.min(syncCount/4*100,100)+'%';
+  syncD.textContent=syncCount===0?'No sync detected yet'
+    :syncCount===1?'1 column in sync — watching'
+    :`${syncCount} columns synced — signal forming`;
+
+  if(!signals.length){
+    badge.className='sig-badge watching'; badge.textContent='WATCHING';
+    main.textContent=bpCount<5?'Enter outcomes':'Watching…';
+    sub.textContent=bpCount<5?`Need ${5-bpCount} more hands`:`${openSeries} series open · last: ${lastBP||'—'}`;
+    betRow.style.display='none';
+    return;
+  }
+
+  const sig=signals[0];
+  badge.className='sig-badge active'; badge.textContent=sig.code;
+  main.textContent=sig.name;
+  sub.textContent=sig.reason;
+  betRow.style.display='flex';
+  side.className='sig-side '+sig.side;
+  side.textContent=sig.side==='B'?'BANK':'PLAY';
+  units.innerHTML=`<b>${sig.units}</b> unit${sig.units>1?'s':''}<br><span style="color:var(--dim);font-size:10px">Cluster ${q10.cluster}</span>`;
+}
+
+function renderQ10(){
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('cp'+i);
+    const last=q10.history.filter(h=>h.cluster===i).slice(-1)[0];
+    if(i===q10.cluster) el.className='cluster-pip active-pip';
+    else if(last&&last.result==='W') el.className='cluster-pip won-pip';
+    else if(last&&last.result==='L') el.className='cluster-pip lost-pip';
+    else el.className='cluster-pip';
+  }
+}
+
+function renderStats(){
+  document.getElementById('stWins').textContent=stats.wins;
+  document.getElementById('stLosses').textContent=stats.losses;
+  document.getElementById('stBets').textContent=stats.bets;
+  const rate=stats.bets>0?Math.round(stats.wins/stats.bets*100)+'%':'—';
+  document.getElementById('stRate').textContent=rate;
+}
+
+function renderRecent(){
+  const el=document.getElementById('recentList');
+  if(!recentResults.length){
+    el.innerHTML='<span style="font-size:11px;color:var(--dim)">None yet</span>';
+    return;
+  }
+  el.innerHTML=recentResults.slice(0,8).map(r=>
+    `<div class="recent-item">
+      <div class="recent-dot ${r.result}"></div>
+      <span>H${r.hand} — <span style="color:${r.result==='W'?'var(--win)':'var(--loss)'}">${r.result==='W'?'Win':'Loss'}</span></span>
+    </div>`
+  ).join('');
+}
+
+/* ── KEYBOARD SHORTCUTS ── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='p'||e.key==='P') addHand('P');
+  if(e.key==='b'||e.key==='B') addHand('B');
+  if(e.key==='t'||e.key==='T') addHand('T');
+  if(e.key==='w'||e.key==='W') logBetResult('W');
+  if(e.key==='l'||e.key==='L') logBetResult('L');
+  if(e.key==='z'&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); undo(); }
+});
+
+render();
+</script>
+</body>
+</html>
