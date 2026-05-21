@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Gap & Pattern Tracker</title>
+<style>
+  :root {
+    --bg-deep: #0a1410;
+    --bg-felt: #0f2419;
+    --felt-edge: #1a3a2a;
+    --gold: #d4af37;
+    --gold-bright: #f4cf57;
+    --cream: #f5ebd0;
+    --banker: #c0392b;
+    --banker-dark: #8e2620;
+    --player: #2980b9;
+    --player-dark: #1f5f8b;
+    --green: #27ae60;
+    --green-bright: #4ade80;
+    --danger: #e74c3c;
+    --neutral: #6b7c75;
+    --shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: radial-gradient(ellipse at center, var(--bg-felt) 0%, var(--bg-deep) 100%);
+    color: var(--cream);
+    min-height: 100vh;
+    padding: 20px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  }
+  h1 {
+    font-size: 1.9rem;
+    font-weight: normal;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    text-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  }
+  .subtitle {
+    font-size: 0.78rem;
+    color: var(--neutral);
+    letter-spacing: 0.28em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  /* Big tally buttons */
+  .tally-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .tally-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 26px 18px;
+    cursor: pointer;
+    color: white;
+    font-family: 'Georgia', serif;
+    transition: transform 0.08s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .tally-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+  .tally-btn:active { transform: translateY(0) scale(0.97); }
+  .tally-btn.banker {
+    background: linear-gradient(150deg, var(--banker), var(--banker-dark));
+    box-shadow: 0 6px 20px rgba(192, 57, 43, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .tally-btn.player {
+    background: linear-gradient(150deg, var(--player), var(--player-dark));
+    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .tally-btn .label {
+    font-size: 1.1rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0.92;
+  }
+  .tally-btn .count {
+    font-size: 3.4rem;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    line-height: 1.1;
+    margin-top: 4px;
+  }
+  .tally-btn .hotkey {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    opacity: 0.5;
+  }
+
+  /* Difference panel */
+  .diff-panel {
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 2px solid var(--felt-edge);
+    background: linear-gradient(145deg, #142820, #0c1c14);
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+  }
+  .diff-panel .diff-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--neutral);
+    margin-bottom: 4px;
+  }
+  .diff-panel .diff-number {
+    font-size: 5.5rem;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+    color: var(--gold-bright);
+    transition: color 0.3s ease;
+  }
+  .diff-panel .diff-leader {
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+    margin-top: 6px;
+    color: var(--cream);
+  }
+  .diff-panel .diff-state {
+    margin-top: 12px;
+    font-size: 1rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-weight: bold;
+    min-height: 1.2em;
+  }
+
+  /* Alert state */
+  .diff-panel.alert {
+    border-color: var(--green-bright);
+    background: linear-gradient(145deg, #143020, #0a1f12);
+    box-shadow: 0 0 50px rgba(74, 222, 128, 0.45);
+    animation: pulseAlert 1.4s ease-in-out infinite;
+  }
+  .diff-panel.alert .diff-number { color: var(--green-bright); text-shadow: 0 0 30px rgba(74,222,128,0.7); }
+  .diff-panel.alert .diff-state { color: var(--green-bright); }
+  @keyframes pulseAlert {
+    0%, 100% { box-shadow: 0 0 40px rgba(74, 222, 128, 0.35); }
+    50% { box-shadow: 0 0 65px rgba(74, 222, 128, 0.7); }
+  }
+
+  /* Stop loss state */
+  .diff-panel.stop {
+    border-color: var(--danger);
+    background: linear-gradient(145deg, #301414, #1f0a0a);
+    box-shadow: 0 0 45px rgba(231, 76, 60, 0.4);
+  }
+  .diff-panel.stop .diff-number { color: var(--danger); text-shadow: 0 0 25px rgba(231,76,60,0.6); }
+  .diff-panel.stop .diff-state { color: var(--danger); }
+
+  /* Next Bet banner */
+  .bet-panel {
+    border-radius: 14px;
+    padding: 16px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 2px solid var(--felt-edge);
+    transition: all 0.25s ease;
+  }
+  .bet-panel .bet-left { display: flex; flex-direction: column; text-align: left; }
+  .bet-panel .bet-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--neutral);
+  }
+  .bet-panel .bet-note {
+    font-size: 0.78rem;
+    color: var(--neutral);
+    margin-top: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  .bet-panel .bet-rec {
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    font-family: 'Georgia', serif;
+    white-space: nowrap;
+  }
+  .bet-panel.bet-wait { background: linear-gradient(145deg,#142820,#0c1c14); }
+  .bet-panel.bet-wait .bet-rec { color: var(--neutral); }
+  .bet-panel.bet-stop { background: linear-gradient(145deg,#301414,#1f0a0a); border-color: var(--danger); }
+  .bet-panel.bet-stop .bet-rec { color: var(--danger); }
+  .bet-panel.bet-banker {
+    background: linear-gradient(150deg, var(--banker), var(--banker-dark));
+    border-color: #e8786b;
+    box-shadow: 0 0 38px rgba(192,57,43,0.5);
+    animation: betPulse 1.4s ease-in-out infinite;
+  }
+  .bet-panel.bet-player {
+    background: linear-gradient(150deg, var(--player), var(--player-dark));
+    border-color: #6bb6e8;
+    box-shadow: 0 0 38px rgba(41,128,185,0.5);
+    animation: betPulse 1.4s ease-in-out infinite;
+  }
+  .bet-panel.bet-banker .bet-rec,
+  .bet-panel.bet-banker .bet-label,
+  .bet-panel.bet-banker .bet-note,
+  .bet-panel.bet-player .bet-rec,
+  .bet-panel.bet-player .bet-label,
+  .bet-panel.bet-player .bet-note { color: #fff; }
+  .bet-panel.bet-banker .bet-note,
+  .bet-panel.bet-player .bet-note { opacity: 0.85; }
+  @keyframes betPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.12); }
+  }
+
+  /* Pair stats */
+  .section-title {
+    font-size: 0.74rem;
+    letter-spacing: 0.25em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin: 0 0 12px 2px;
+    font-weight: normal;
+  }
+  .section-title .sub { color: var(--neutral); letter-spacing: 0.1em; }
+
+  .pairs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .pair-tile {
+    background: linear-gradient(145deg, #142820, #0c1c14);
+    border: 1px solid var(--felt-edge);
+    border-radius: 12px;
+    padding: 16px 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .pair-tile.leader {
+    border-color: var(--gold);
+    box-shadow: 0 0 22px rgba(212, 175, 55, 0.3);
+  }
+  .pair-tile .pair-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 8px;
+  }
+  .pair-tile .pair-name .b { color: #e8786b; }
+  .pair-tile .pair-name .p { color: #6bb6e8; }
+  .pair-tile .pair-count {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--gold-bright);
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+  }
+  .pair-tile .pair-pct {
+    font-size: 0.8rem;
+    color: var(--neutral);
+    margin-top: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  .pair-tile .crown {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 0.85rem;
+    opacity: 0;
+  }
+  .pair-tile.leader .crown { opacity: 1; }
+
+  .pairs-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--neutral);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 20px;
+    padding: 0 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pairs-meta .in-progress .chip {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-left: 6px;
+    line-height: 18px;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: white;
+  }
+  .chip.B { background: var(--banker); }
+  .chip.P { background: var(--player); }
+  .chip.empty { background: rgba(255,255,255,0.12); }
+
+  /* Sequence strip */
+  .seq-strip {
+    background: linear-gradient(145deg, #0c1c14, #0a1812);
+    border: 1px solid var(--felt-edge);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 20px;
+    min-height: 56px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-content: flex-start;
+  }
+  .seq-pair {
+    display: flex;
+    gap: 3px;
+    padding: 4px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .seq-pair.incomplete { border-style: dashed; border-color: rgba(212,175,55,0.4); }
+  .bead {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    font-family: 'Courier New', monospace;
+  }
+  .bead.B { background: var(--banker); }
+  .bead.P { background: var(--player); }
+  .seq-empty { color: var(--neutral); font-style: italic; font-size: 0.85rem; align-self: center; }
+
+  /* Controls */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  button.action {
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Georgia', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-weight: bold;
+  }
+  .undo-btn { background: #3a4a42; color: var(--cream); border: 1px solid var(--felt-edge); }
+  .undo-btn:hover { background: #4a5a52; }
+  .export-btn { background: #1e4a2a; color: var(--cream); border: 1px solid #2e6a3a; }
+  .export-btn:hover { background: #2a5a36; }
+  .reset-btn { background: #4a2020; color: var(--cream); border: 1px solid #6a3030; }
+  .reset-btn:hover { background: #5a3030; }
+
+  .keyboard-hint {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.72rem;
+    color: var(--neutral);
+    letter-spacing: 0.1em;
+  }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+  ::-webkit-scrollbar-thumb { background: var(--felt-edge); border-radius: 4px; }
+
+  @media (max-width: 640px) {
+    .pairs-grid { grid-template-columns: 1fr 1fr; }
+    .tally-btn .count { font-size: 2.6rem; }
+    .diff-panel .diff-number { font-size: 4rem; }
+    .controls { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GAP &amp; PATTERN TRACKER</h1>
+      <div class="subtitle">Banker · Player · Difference · 2-Hand Patterns</div>
+    </header>
+
+    <div class="tally-buttons">
+      <button class="tally-btn banker" onclick="record('B')">
+        <span class="hotkey">B</span>
+        <div class="label">Banker</div>
+        <div class="count" id="bankerCount">0</div>
+      </button>
+      <button class="tally-btn player" onclick="record('P')">
+        <span class="hotkey">P</span>
+        <div class="label">Player</div>
+        <div class="count" id="playerCount">0</div>
+      </button>
+    </div>
+
+    <div class="diff-panel" id="diffPanel">
+      <div class="diff-label">Difference</div>
+      <div class="diff-number" id="diffNumber">0</div>
+      <div class="diff-leader" id="diffLeader">Even</div>
+      <div class="diff-state" id="diffState"></div>
+    </div>
+
+    <div class="bet-panel bet-wait" id="betPanel">
+      <div class="bet-left">
+        <span class="bet-label">Next Bet</span>
+        <span class="bet-note" id="betNote">Waiting for the gap to reach 8</span>
+      </div>
+      <span class="bet-rec" id="betRec">WAIT</span>
+    </div>
+
+    <h3 class="section-title">2-Hand Patterns <span class="sub">· non-overlapping pairs · ties skipped</span></h3>
+    <div class="pairs-grid" id="pairsGrid">
+      <div class="pair-tile" data-pair="BB">
+        <span class="crown">👑</span>
+        <div class="pair-name"><span class="b">B</span><span class="b">B</span></div>
+        <div class="pair-count" id="count-BB">0</div>
+        <div class="pair-pct" id="pct-BB">—</div>
+      </div>
+      <div class="pair-tile" data-pair="PP">
+        <span class="crown">👑</span>
+        <div class="pair-name"><span class="p">P</span><span class="p">P</span></div>
+        <div class="pair-count" id="count-PP">0</div>
+        <div class="pair-pct" id="pct-PP">—</div>
+      </div>
+      <div class="pair-tile" data-pair="BP">
+        <span class="crown">👑</span>
+        <div class="pair-name"><span class="b">B</span><span class="p">P</span></div>
+        <div class="pair-count" id="count-BP">0</div>
+        <div class="pair-pct" id="pct-BP">—</div>
+      </div>
+      <div class="pair-tile" data-pair="PB">
+        <span class="crown">👑</span>
+        <div class="pair-name"><span class="p">P</span><span class="b">B</span></div>
+        <div class="pair-count" id="count-PB">0</div>
+        <div class="pair-pct" id="pct-PB">—</div>
+      </div>
+    </div>
+
+    <div class="pairs-meta">
+      <span>Completed pairs: <strong id="totalPairs">0</strong></span>
+      <span class="in-progress">Current pair: <span id="inProgress"><span class="chip empty"></span><span class="chip empty"></span></span></span>
+      <span>Hands counted (B+P): <strong id="totalHands">0</strong></span>
+    </div>
+
+    <h3 class="section-title">Sequence</h3>
+    <div class="seq-strip" id="seqStrip">
+      <span class="seq-empty">No hands yet — press Banker or Player</span>
+    </div>
+
+    <div class="controls">
+      <button class="action undo-btn" onclick="undo()">↶ Undo</button>
+      <button class="action export-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="action reset-btn" onclick="resetShoe()">Reset Shoe</button>
+    </div>
+
+    <div class="keyboard-hint">
+      Keyboard: B = Banker · P = Player · Backspace = Undo &nbsp;|&nbsp; Ties: just don't press anything
+    </div>
+  </div>
+
+<script>
+  // Config — adjust these if you want different thresholds
+  const ALERT_START = 8;   // highlight begins at this difference
+  const STOP_LOSS  = 11;   // difference at/above this = stop loss, must drop below ALERT_START to re-arm
+
+  let sequence = [];   // array of 'B' / 'P' (ties never enter here)
+  let bankerCount = 0;
+  let playerCount = 0;
+  let stoppedOut = false;
+  let prevState = 'normal';
+
+  function record(side) {
+    sequence.push(side);
+    if (side === 'B') bankerCount++; else playerCount++;
+    update();
+  }
+
+  function undo() {
+    if (sequence.length === 0) return;
+    const last = sequence.pop();
+    if (last === 'B') bankerCount--; else playerCount--;
+    // re-evaluate stop-out from scratch is complex; recompute below in update()
+    update();
+  }
+
+  function resetShoe() {
+    if (!confirm('Reset the shoe? All counts, pairs, and sequence will be cleared. Export first if you want to keep this data.')) return;
+    sequence = [];
+    bankerCount = 0;
+    playerCount = 0;
+    stoppedOut = false;
+    prevState = 'normal';
+    update();
+  }
+
+  function getPairs() {
+    const pairs = { BB: 0, PP: 0, BP: 0, PB: 0 };
+    for (let i = 0; i + 1 < sequence.length; i += 2) {
+      const key = sequence[i] + sequence[i + 1];
+      pairs[key]++;
+    }
+    return pairs;
+  }
+
+  function update() {
+    const diff = Math.abs(bankerCount - playerCount);
+
+    // Stop-loss state machine
+    if (diff >= STOP_LOSS) stoppedOut = true;
+    if (diff < ALERT_START) stoppedOut = false;
+
+    let state = 'normal';
+    if (diff >= STOP_LOSS || (stoppedOut && diff >= ALERT_START)) {
+      state = 'stop';
+    } else if (diff >= ALERT_START) {
+      state = 'alert';
+    }
+
+    // beep on entering alert
+    if (state === 'alert' && prevState !== 'alert') {
+      try { beep(); } catch (e) {}
+    }
+    prevState = state;
+
+    // counts
+    document.getElementById('bankerCount').textContent = bankerCount;
+    document.getElementById('playerCount').textContent = playerCount;
+
+    // difference panel
+    const panel = document.getElementById('diffPanel');
+    panel.classList.remove('alert', 'stop');
+    document.getElementById('diffNumber').textContent = diff;
+
+    const leaderEl = document.getElementById('diffLeader');
+    if (bankerCount > playerCount) leaderEl.textContent = 'Banker leads';
+    else if (playerCount > bankerCount) leaderEl.textContent = 'Player leads';
+    else leaderEl.textContent = 'Even';
+
+    const stateEl = document.getElementById('diffState');
+    if (state === 'alert') {
+      panel.classList.add('alert');
+      stateEl.textContent = '⚑ Alert — Bet Window';
+    } else if (state === 'stop') {
+      panel.classList.add('stop');
+      stateEl.textContent = '✕ Stop Loss';
+    } else {
+      stateEl.textContent = '';
+    }
+
+    // next bet recommendation — bet the trailing side (fewer points) during the alert window
+    const betPanel = document.getElementById('betPanel');
+    const betRec = document.getElementById('betRec');
+    const betNote = document.getElementById('betNote');
+    betPanel.classList.remove('bet-wait', 'bet-stop', 'bet-banker', 'bet-player');
+    if (state === 'alert') {
+      const trailing = bankerCount < playerCount ? 'B' : 'P';
+      if (trailing === 'B') {
+        betPanel.classList.add('bet-banker');
+        betRec.textContent = 'BET BANKER';
+      } else {
+        betPanel.classList.add('bet-player');
+        betRec.textContent = 'BET PLAYER';
+      }
+      betNote.textContent = 'Trailing side (fewer wins) · gap ' + diff;
+    } else if (state === 'stop') {
+      betPanel.classList.add('bet-stop');
+      betRec.textContent = 'SIT OUT';
+      betNote.textContent = 'Gap ≥ ' + STOP_LOSS + ' — wait until it drops below ' + ALERT_START;
+    } else {
+      betPanel.classList.add('bet-wait');
+      betRec.textContent = 'WAIT';
+      betNote.textContent = 'Need gap ' + ALERT_START + ' · currently ' + diff;
+    }
+
+    // pairs
+    const pairs = getPairs();
+    const totalPairs = pairs.BB + pairs.PP + pairs.BP + pairs.PB;
+    const maxCount = Math.max(pairs.BB, pairs.PP, pairs.BP, pairs.PB);
+
+    ['BB', 'PP', 'BP', 'PB'].forEach(key => {
+      document.getElementById('count-' + key).textContent = pairs[key];
+      const pctEl = document.getElementById('pct-' + key);
+      pctEl.textContent = totalPairs > 0 ? (pairs[key] / totalPairs * 100).toFixed(1) + '%' : '—';
+      const tile = document.querySelector('.pair-tile[data-pair="' + key + '"]');
+      // mark leader(s) only when there's a clear non-zero max
+      if (maxCount > 0 && pairs[key] === maxCount) tile.classList.add('leader');
+      else tile.classList.remove('leader');
+    });
+
+    document.getElementById('totalPairs').textContent = totalPairs;
+    document.getElementById('totalHands').textContent = sequence.length;
+
+    // in-progress pair (if odd count, last hand is the open one)
+    const ip = document.getElementById('inProgress');
+    if (sequence.length % 2 === 1) {
+      const open = sequence[sequence.length - 1];
+      ip.innerHTML = `<span class="chip ${open}">${open}</span><span class="chip empty"></span>`;
+    } else {
+      ip.innerHTML = `<span class="chip empty"></span><span class="chip empty"></span>`;
+    }
+
+    // sequence strip (grouped into pairs)
+    const strip = document.getElementById('seqStrip');
+    if (sequence.length === 0) {
+      strip.innerHTML = '<span class="seq-empty">No hands yet — press Banker or Player</span>';
+    } else {
+      let html = '';
+      for (let i = 0; i < sequence.length; i += 2) {
+        const a = sequence[i];
+        const b = sequence[i + 1];
+        const incomplete = (b === undefined);
+        html += '<div class="seq-pair' + (incomplete ? ' incomplete' : '') + '">';
+        html += `<span class="bead ${a}">${a}</span>`;
+        if (!incomplete) html += `<span class="bead ${b}">${b}</span>`;
+        html += '</div>';
+      }
+      strip.innerHTML = html;
+      strip.scrollTop = strip.scrollHeight;
+    }
+  }
+
+  function beep() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    o.start();
+    o.stop(ctx.currentTime + 0.5);
+  }
+
+  function exportCSV() {
+    if (sequence.length === 0) {
+      alert('No hands recorded yet.');
+      return;
+    }
+    const pairs = getPairs();
+    const totalPairs = pairs.BB + pairs.PP + pairs.BP + pairs.PB;
+    const diff = Math.abs(bankerCount - playerCount);
+
+    const pc = (n) => totalPairs > 0 ? (n / totalPairs * 100).toFixed(1) + '%' : 'n/a';
+
+    const summary = [
+      '# Baccarat Gap & Pattern Export',
+      `# Exported: ${new Date().toISOString()}`,
+      `# Banker Wins: ${bankerCount}`,
+      `# Player Wins: ${playerCount}`,
+      `# Final Difference: ${diff}`,
+      `# Hands Counted (B+P): ${sequence.length}`,
+      `# Completed Pairs: ${totalPairs}`,
+      `# BB: ${pairs.BB} (${pc(pairs.BB)})`,
+      `# PP: ${pairs.PP} (${pc(pairs.PP)})`,
+      `# BP: ${pairs.BP} (${pc(pairs.BP)})`,
+      `# PB: ${pairs.PB} (${pc(pairs.PB)})`,
+      ''
+    ];
+
+    // Per-pair rows
+    let csv = summary.join('\n');
+    csv += 'Pair #,First Hand,Second Hand,Pattern\n';
+    let pairNum = 1;
+    for (let i = 0; i + 1 < sequence.length; i += 2) {
+      csv += `${pairNum},${sequence[i]},${sequence[i + 1]},${sequence[i] + sequence[i + 1]}\n`;
+      pairNum++;
+    }
+    // note incomplete trailing hand
+    if (sequence.length % 2 === 1) {
+      csv += `${pairNum},${sequence[sequence.length - 1]},(incomplete),(open)\n`;
+    }
+
+    csv += '\nFull Sequence,' + sequence.join('|') + '\n';
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `baccarat-gap-pattern-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'b') { e.preventDefault(); record('B'); }
+    else if (k === 'p') { e.preventDefault(); record('P'); }
+    else if (e.key === 'Backspace') { e.preventDefault(); undo(); }
+  });
+
+  update();
+</script>
+</body>
+</html>
