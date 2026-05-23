@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Tie Predictor v2</title>
+<style>
+  :root {
+    --bg-deep:#0a1410; --bg-felt:#0f2419; --felt-edge:#1a3a2a;
+    --gold:#d4af37; --gold-bright:#f4cf57; --cream:#f5ebd0;
+    --banker:#c0392b; --player:#2980b9; --green:#27ae60; --green-bright:#4ade80;
+    --neutral:#6b7c75; --danger:#e74c3c; --shadow:0 8px 32px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Georgia',serif;background:radial-gradient(ellipse at center,var(--bg-felt),var(--bg-deep));
+    color:var(--cream);min-height:100vh;padding:20px;user-select:none;-webkit-user-select:none;}
+  .container{max-width:1100px;margin:0 auto;}
+  header{text-align:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(212,175,55,0.2);}
+  h1{font-size:1.9rem;font-weight:normal;letter-spacing:0.13em;color:var(--gold);text-shadow:0 2px 8px rgba(212,175,55,0.3);}
+  .subtitle{font-size:0.76rem;color:var(--neutral);letter-spacing:0.24em;margin-top:6px;text-transform:uppercase;}
+
+  /* PRE-HAND SIGNAL — the fix: shows BEFORE you deal, based on entering state */
+  .signal-banner{border-radius:14px;padding:18px 22px;margin-bottom:18px;text-align:center;
+    border:2px solid var(--felt-edge);background:linear-gradient(145deg,#142820,#0c1c14);
+    box-shadow:var(--shadow);transition:all .25s ease;}
+  .signal-banner.bet-tie{border-color:var(--gold);background:linear-gradient(145deg,#1c3322,#0a1f12);
+    box-shadow:0 0 60px rgba(244,207,87,0.5);animation:pulse 1.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 45px rgba(244,207,87,.4);}50%{box-shadow:0 0 70px rgba(244,207,87,.75);}}
+  .signal-banner .sb-label{font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--neutral);margin-bottom:6px;}
+  .signal-banner .sb-rec{font-size:2.6rem;font-weight:bold;letter-spacing:0.1em;color:var(--neutral);line-height:1;}
+  .signal-banner.bet-tie .sb-rec{color:var(--gold-bright);text-shadow:0 0 30px rgba(244,207,87,.8);}
+  .signal-banner .sb-why{font-size:0.82rem;color:var(--neutral);margin-top:8px;font-family:'Courier New',monospace;letter-spacing:0.04em;}
+  .signal-banner.bet-tie .sb-why{color:var(--cream);}
+
+  .displays{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .display-card{background:linear-gradient(145deg,#142820,#0c1c14);border:1px solid var(--felt-edge);
+    border-radius:12px;padding:16px;box-shadow:var(--shadow);position:relative;}
+  .display-label{font-size:0.68rem;letter-spacing:0.22em;color:var(--neutral);text-transform:uppercase;margin-bottom:6px;}
+  .count-value{font-size:3rem;font-weight:bold;text-align:center;color:var(--gold-bright);
+    font-family:'Courier New',monospace;line-height:1;}
+  .count-sub{text-align:center;font-size:0.72rem;color:var(--neutral);margin-top:4px;font-family:'Courier New',monospace;}
+
+  .cards-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:14px;}
+  .card-btn{aspect-ratio:3/4;background:linear-gradient(145deg,#fafafa,#e8e0c8);border:2px solid rgba(0,0,0,0.2);
+    border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Georgia',serif;transition:transform .08s,box-shadow .1s;
+    box-shadow:0 4px 12px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.8);position:relative;overflow:hidden;}
+  .card-btn:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.5),0 0 0 2px var(--gold);}
+  .card-btn:active{transform:translateY(0) scale(.96);}
+  .card-face{font-size:2rem;font-weight:bold;color:#1a1a1a;line-height:1;}
+  .card-btn.red .card-face{color:var(--banker);}
+  .card-value{position:absolute;bottom:5px;font-size:0.68rem;font-weight:bold;padding:2px 7px;border-radius:10px;}
+  .val-plus{background:#1e7a3e;color:#fff;}.val-minus{background:#b03030;color:#fff;}.val-zero{background:#555;color:#fff;}
+
+  .current-hand-box{background:linear-gradient(145deg,#0c1c14,#0a1812);border:1px dashed rgba(212,175,55,0.3);
+    border-radius:10px;padding:10px 14px;margin-bottom:14px;min-height:42px;font-family:'Courier New',monospace;
+    text-align:center;letter-spacing:0.1em;}
+  .current-hand-box.empty{color:var(--neutral);font-style:italic;}
+
+  .controls{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-bottom:22px;}
+  button.action{padding:15px;border:none;border-radius:10px;font-family:'Georgia',serif;font-size:0.92rem;
+    letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all .15s;font-weight:bold;}
+  .end-btn{background:linear-gradient(145deg,var(--gold-bright),var(--gold));color:#1a1a1a;box-shadow:0 4px 12px rgba(212,175,55,.4);}
+  .end-btn:hover{transform:translateY(-2px);}.end-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .undo-btn{background:#3a4a42;color:var(--cream);border:1px solid var(--felt-edge);}.undo-btn:hover{background:#4a5a52;}
+  .export-btn{background:#1e4a2a;color:var(--cream);border:1px solid #2e6a3a;}.export-btn:hover{background:#2a5a36;}
+  .reset-btn{background:#4a2020;color:var(--cream);border:1px solid #6a3030;}.reset-btn:hover{background:#5a3030;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--felt-edge);}
+  .tab{padding:10px 16px;background:none;color:var(--neutral);border:none;cursor:pointer;font-family:'Georgia',serif;
+    font-size:0.82rem;letter-spacing:0.13em;text-transform:uppercase;border-bottom:2px solid transparent;}
+  .tab:hover{color:var(--cream);}.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .panel{background:linear-gradient(145deg,#0c1c14,#0a1812);border:1px solid var(--felt-edge);border-radius:12px;
+    padding:16px;min-height:180px;max-height:460px;overflow-y:auto;display:none;}
+  .panel.active{display:block;}
+
+  .rule-config{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px;background:rgba(0,0,0,0.25);
+    border-radius:8px;margin-bottom:16px;font-size:0.85rem;}
+  .rule-config label{color:var(--neutral);letter-spacing:0.05em;}
+  .rule-config input{width:54px;padding:5px 8px;background:#0a1812;border:1px solid var(--felt-edge);
+    border-radius:6px;color:var(--gold-bright);font-family:'Courier New',monospace;font-size:0.95rem;text-align:center;}
+
+  .stats-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .stat-card{background:rgba(0,0,0,0.35);padding:12px;border-radius:8px;border:1px solid var(--felt-edge);text-align:center;}
+  .stat-label{font-size:0.62rem;letter-spacing:0.16em;color:var(--neutral);text-transform:uppercase;margin-bottom:6px;}
+  .stat-value{font-size:1.5rem;font-weight:bold;color:var(--gold-bright);font-family:'Courier New',monospace;}
+  .stat-value.green{color:var(--green-bright);}
+
+  table.stbl{width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:0.82rem;margin-bottom:16px;}
+  table.stbl th,table.stbl td{padding:6px 9px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}
+  table.stbl th{color:var(--neutral);font-weight:normal;font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;}
+  table.stbl tr.hot td{color:var(--green-bright);background:rgba(74,222,128,0.08);}
+
+  .history-list{display:flex;flex-direction:column;gap:5px;}
+  .hrow{display:grid;grid-template-columns:38px 1fr auto auto auto;gap:10px;padding:7px 11px;background:rgba(0,0,0,0.3);
+    border-radius:6px;font-size:0.82rem;font-family:'Courier New',monospace;align-items:center;}
+  .hrow .hn{color:var(--neutral);}.hrow .hc{color:var(--cream);}.hrow .hcnt{color:var(--gold-bright);font-size:0.76rem;}
+  .hres{padding:2px 9px;border-radius:11px;font-size:0.68rem;font-weight:bold;letter-spacing:0.12em;}
+  .hres.B{background:var(--banker);color:#fff;}.hres.P{background:var(--player);color:#fff;}.hres.T{background:var(--green);color:#fff;}
+  .htag{font-size:0.66rem;padding:2px 7px;border-radius:9px;}
+  .htag.hit{background:rgba(74,222,128,0.25);color:var(--green-bright);}
+  .htag.miss{background:rgba(231,76,60,0.18);color:#f08080;}
+  .htag.unp{background:rgba(231,76,60,0.12);color:#e0a0a0;}
+
+  .empty-msg{color:var(--neutral);font-style:italic;text-align:center;padding:26px 10px;}
+
+  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;
+    z-index:1000;backdrop-filter:blur(8px);}
+  .modal-ov.show{display:flex;}
+  .modal{text-align:center;padding:34px 48px;background:linear-gradient(145deg,#0f2419,#051008);border:3px solid var(--felt-edge);
+    border-radius:18px;max-width:460px;animation:pop .35s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .modal .m-label{font-size:0.8rem;letter-spacing:0.28em;color:var(--neutral);text-transform:uppercase;margin-bottom:10px;}
+  .modal .m-info{font-size:0.82rem;color:var(--neutral);margin-bottom:18px;font-family:'Courier New',monospace;}
+  .res-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px;}
+  .res-btn{padding:15px;border:none;border-radius:9px;font-family:'Georgia',serif;font-size:0.92rem;font-weight:bold;
+    letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;color:#fff;}
+  .res-btn:hover{filter:brightness(1.15);}
+  .res-btn.b{background:var(--banker);}.res-btn.p{background:var(--player);}.res-btn.t{background:var(--green);}
+  .res-btn .k{display:block;font-size:0.62rem;opacity:.7;margin-top:2px;}
+  .cancel-link{background:none;border:none;color:var(--neutral);font-family:'Georgia',serif;font-size:0.78rem;
+    cursor:pointer;text-decoration:underline;}
+
+  .khint{text-align:center;margin-top:14px;font-size:0.72rem;color:var(--neutral);letter-spacing:0.08em;line-height:1.6;}
+  ::-webkit-scrollbar{width:8px;}::-webkit-scrollbar-track{background:rgba(0,0,0,0.3);}
+  ::-webkit-scrollbar-thumb{background:var(--felt-edge);border-radius:4px;}
+  @media(max-width:720px){.cards-grid{grid-template-columns:repeat(5,1fr);}.displays,.controls{grid-template-columns:1fr 1fr;}
+    .stats-summary{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>TIE PREDICTOR v2</h1>
+      <div class="subtitle">Reads the state ENTERING each hand · Hand≈0 + Big-Plus rule</div>
+    </header>
+
+    <!-- THE FIX: pre-hand signal based on the count you're carrying INTO this hand -->
+    <div class="signal-banner" id="signalBanner">
+      <div class="sb-label">Before You Bet This Hand</div>
+      <div class="sb-rec" id="sbRec">WAIT</div>
+      <div class="sb-why" id="sbWhy">Deal the first hand to begin</div>
+    </div>
+
+    <div class="displays">
+      <div class="display-card">
+        <div class="display-label">Shoe Count (carried in)</div>
+        <div class="count-value" id="shoeCount">0</div>
+        <div class="count-sub" id="shoeSub">running total</div>
+      </div>
+      <div class="display-card">
+        <div class="display-label">This Hand's Cards</div>
+        <div class="count-value" id="handCount">0</div>
+        <div class="count-sub">live sum of dealt cards</div>
+      </div>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid"></div>
+    <div class="current-hand-box empty" id="currentHand">No cards dealt yet</div>
+
+    <div class="controls">
+      <button class="action end-btn" id="endBtn" onclick="endHand()">End Hand · Record Result</button>
+      <button class="action undo-btn" onclick="undoLast()">↶ Undo</button>
+      <button class="action export-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="action reset-btn" onclick="resetShoe()">Reset Shoe</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('history',event)">Hand History</button>
+      <button class="tab" onclick="switchTab('stats',event)">Tie Stats</button>
+    </div>
+
+    <div id="historyPanel" class="panel active">
+      <div id="historyList" class="history-list"><div class="empty-msg">No hands recorded yet</div></div>
+    </div>
+
+    <div id="statsPanel" class="panel">
+      <div class="rule-config">
+        <span style="color:var(--gold);letter-spacing:0.1em;">TIE RULE:</span>
+        <label>|Hand count| ≤ <input type="number" id="cfgHC" value="1" min="0" max="10" onchange="update()"></label>
+        <label>AND Shoe ≥ +<input type="number" id="cfgShoe" value="5" min="0" max="30" onchange="update()"></label>
+        <span style="color:var(--neutral);">(entering state)</span>
+      </div>
+      <div id="statsContent"><div class="empty-msg">Record hands to see tie statistics</div></div>
+    </div>
+
+    <div class="khint">
+      Cards: 1-9 · 0/T for 10 · A · J/Q/K &nbsp;|&nbsp; Enter = End Hand · Backspace = Undo<br>
+      The gold <strong>BET TIE</strong> banner appears <em>before</em> you deal, based on the count carried into the hand.
+    </div>
+  </div>
+
+  <div id="modalOv" class="modal-ov">
+    <div class="modal" id="modal">
+      <div class="m-label" id="mLabel">Record Result</div>
+      <div class="m-info" id="mInfo"></div>
+      <div class="res-btns">
+        <button class="res-btn b" onclick="recordResult('B')">Banker<span class="k">B</span></button>
+        <button class="res-btn p" onclick="recordResult('P')">Player<span class="k">P</span></button>
+        <button class="res-btn t" onclick="recordResult('T')">Tie<span class="k">T</span></button>
+      </div>
+      <button class="cancel-link" onclick="cancelResult()">cancel · keep adding cards</button>
+    </div>
+  </div>
+
+<script>
+  const CARDS=[
+    {f:'A',v:1},{f:'2',v:1},{f:'3',v:1},{f:'4',v:2},{f:'5',v:-1},{f:'6',v:-2},
+    {f:'7',v:-1},{f:'8',v:-1},{f:'9',v:0},{f:'10',v:0},{f:'J',v:0},{f:'Q',v:0,red:true},{f:'K',v:0}
+  ];
+
+  // STATE
+  let shoeCount=0;             // running, carried across hands (this is the "entering" shoe count for the next hand)
+  let handCards=[];           // cards in the hand being dealt now
+  let history=[];             // recorded hands
+  let undoStack=[];
+  let modalOpen=false, pending=null;
+  let shoeStartedAt=new Date();
+
+  function vClass(v){return v>0?'val-plus':v<0?'val-minus':'val-zero';}
+  function vLabel(v){return v>0?'+'+v:''+v;}
+  function fmt(v){return v>0?'+'+v:''+v;}
+  function handSum(){return handCards.reduce((s,c)=>s+c.v,0);}
+
+  // The rule, read from the config inputs
+  function ruleParams(){
+    return {hc:parseInt(document.getElementById('cfgHC').value)||0,
+            shoe:parseInt(document.getElementById('cfgShoe').value)||0};
+  }
+  // Does the ENTERING state (shoe carried in) currently satisfy "big plus"?
+  // Hand-count condition can only be fully known once the hand is dealt, BUT the
+  // signal we show pre-hand keys off the SHOE carried in (the part known before the deal).
+  // After the hand we evaluate the FULL rule (hand sum + entering shoe) for stats.
+
+  function buildButtons(){
+    const g=document.getElementById('cardsGrid');g.innerHTML='';
+    CARDS.forEach((c,i)=>{
+      const b=document.createElement('button');
+      b.className='card-btn'+(c.red?' red':'');
+      b.innerHTML=`<div class="card-face">${c.f}</div><div class="card-value ${vClass(c.v)}">${vLabel(c.v)}</div>`;
+      b.onclick=()=>addCard(i);g.appendChild(b);
+    });
+  }
+
+  function addCard(i){
+    if(modalOpen)return;
+    const c=CARDS[i];
+    handCards.push({f:c.f,v:c.v});
+    shoeCount+=c.v;
+    undoStack.push({t:'card',v:c.v});
+    update();
+  }
+
+  function undoLast(){
+    if(modalOpen)return;
+    if(!undoStack.length)return;
+    const last=undoStack.pop();
+    if(last.t==='card'){
+      shoeCount-=last.v;handCards.pop();
+    }else if(last.t==='end'){
+      const rec=history.shift();
+      shoeCount=last.shoeBefore;       // restore running count
+      handCards=rec.cards.map(c=>({...c}));
+    }
+    update();
+  }
+
+  function endHand(){
+    if(!handCards.length||modalOpen)return;
+    const enteringShoe = shoeCount - handSum();   // shoe BEFORE this hand's cards
+    const hsum = handSum();
+    const r=ruleParams();
+    // FULL rule evaluation: hand sum near zero AND the shoe ENTERING the hand was big-plus
+    const fired = (Math.abs(hsum)<=r.hc) && (enteringShoe>=r.shoe);
+    pending={
+      cards:[...handCards],
+      handSum:hsum,
+      enteringShoe:enteringShoe,
+      shoeAfter:shoeCount,
+      fired:fired
+    };
+    showModal();
+  }
+
+  function showModal(){
+    modalOpen=true;
+    document.getElementById('mInfo').innerHTML=
+      `Hand sum: <b>${fmt(pending.handSum)}</b> · Shoe entering: <b>${fmt(pending.enteringShoe)}</b>` +
+      (pending.fired?' · <span style="color:var(--gold-bright)">TIE RULE FIRED</span>':'');
+    document.getElementById('modalOv').classList.add('show');
+  }
+  function cancelResult(){modalOpen=false;pending=null;document.getElementById('modalOv').classList.remove('show');}
+
+  function recordResult(outcome){
+    if(!pending)return;
+    history.unshift({
+      n:history.length+1,
+      ts:new Date().toISOString(),
+      cards:pending.cards,
+      handSum:pending.handSum,
+      enteringShoe:pending.enteringShoe,
+      shoeAfter:pending.shoeAfter,
+      fired:pending.fired,
+      actual:outcome
+    });
+    undoStack.push({t:'end',shoeBefore:pending.enteringShoe});
+    handCards=[];pending=null;modalOpen=false;
+    document.getElementById('modalOv').classList.remove('show');
+    update();
+  }
+
+  function resetShoe(){
+    if(!confirm('Reset the shoe? Counts and history cleared. Export first to keep data.'))return;
+    shoeCount=0;handCards=[];history=[];undoStack=[];shoeStartedAt=new Date();update();
+  }
+
+  function update(){
+    const r=ruleParams();
+    const hsum=handSum();
+    const enteringShoe=shoeCount-hsum;   // what we carried into the current (in-progress) hand
+
+    document.getElementById('shoeCount').textContent=fmt(shoeCount);
+    document.getElementById('handCount').textContent=fmt(hsum);
+    document.getElementById('shoeSub').textContent = handCards.length
+      ? 'entering this hand: '+fmt(enteringShoe) : 'running total';
+
+    // PRE-HAND SIGNAL (the fix). Before any card is dealt this hand, enteringShoe == shoeCount.
+    // Show BET TIE when the shoe carried in is big-plus (the part of the rule knowable pre-deal).
+    const banner=document.getElementById('signalBanner');
+    const sbRec=document.getElementById('sbRec'), sbWhy=document.getElementById('sbWhy');
+    banner.classList.remove('bet-tie');
+    if(handCards.length===0){
+      // fresh hand: signal keys off the shoe we are about to play
+      if(shoeCount>=r.shoe){
+        banner.classList.add('bet-tie');
+        sbRec.textContent='BET TIE';
+        sbWhy.textContent=`Shoe carried in = ${fmt(shoeCount)} (≥ +${r.shoe}). Watch for hand sum near 0.`;
+      }else{
+        sbRec.textContent='WAIT';
+        sbWhy.textContent=`Shoe ${fmt(shoeCount)} · need ≥ +${r.shoe} to arm the tie bet`;
+      }
+    }else{
+      // mid-hand: show whether full rule is currently on track
+      const onTrack=(Math.abs(hsum)<=r.hc)&&(enteringShoe>=r.shoe);
+      if(onTrack){
+        banner.classList.add('bet-tie');
+        sbRec.textContent='TIE RULE LIVE';
+        sbWhy.textContent=`Entering shoe ${fmt(enteringShoe)} ≥ +${r.shoe} AND hand sum ${fmt(hsum)} within ±${r.hc}`;
+      }else if(enteringShoe>=r.shoe){
+        sbRec.textContent='TIE ARMED';
+        sbWhy.textContent=`Entering shoe ${fmt(enteringShoe)} ok · hand sum ${fmt(hsum)} (need within ±${r.hc} at end)`;
+      }else{
+        sbRec.textContent='—';
+        sbWhy.textContent=`Entering shoe ${fmt(enteringShoe)} below +${r.shoe}`;
+      }
+    }
+
+    const curEl=document.getElementById('currentHand');
+    if(!handCards.length){curEl.classList.add('empty');curEl.textContent='No cards dealt yet';}
+    else{curEl.classList.remove('empty');curEl.textContent=handCards.map(c=>c.f).join(' · ');}
+
+    document.getElementById('endBtn').disabled=!handCards.length;
+    renderHistory();renderStats();
+  }
+
+  function renderHistory(){
+    const el=document.getElementById('historyList');
+    if(!history.length){el.innerHTML='<div class="empty-msg">No hands recorded yet</div>';return;}
+    el.innerHTML=history.map(h=>{
+      const cards=h.cards.map(c=>c.f).join(' · ');
+      const rn={B:'BANKER',P:'PLAYER',T:'TIE'}[h.actual];
+      let tag='<span></span>';
+      if(h.fired&&h.actual==='T')tag='<span class="htag hit">HIT</span>';
+      else if(h.fired)tag='<span class="htag miss">MISS</span>';
+      else if(h.actual==='T')tag='<span class="htag unp">TIE no-signal</span>';
+      return `<div class="hrow"><span class="hn">#${h.n}</span><span class="hc">${cards}</span>
+        <span class="hcnt">in:${fmt(h.enteringShoe)} sum:${fmt(h.handSum)}</span>
+        <span class="hres ${h.actual}">${rn}</span>${tag}</div>`;
+    }).join('');
+  }
+
+  function renderStats(){
+    const el=document.getElementById('statsContent');
+    if(!history.length){el.innerHTML='<div class="empty-msg">Record hands to see tie statistics</div>';return;}
+    const total=history.length;
+    const ties=history.filter(h=>h.actual==='T').length;
+    const fired=history.filter(h=>h.fired);
+    const firedTie=fired.filter(h=>h.actual==='T').length;
+    const rest=history.filter(h=>!h.fired);
+    const restTie=rest.filter(h=>h.actual==='T').length;
+    const fireRate=fired.length?(firedTie/fired.length*100).toFixed(1):'—';
+    const restRate=rest.length?(restTie/rest.length*100).toFixed(1):'—';
+    const baseRate=(ties/total*100).toFixed(1);
+
+    let html=`<div class="stats-summary">
+      <div class="stat-card"><div class="stat-label">Hands</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Ties</div><div class="stat-value">${ties} <span style="font-size:.8rem;color:var(--neutral)">${baseRate}%</span></div></div>
+      <div class="stat-card"><div class="stat-label">Rule fired</div><div class="stat-value">${fired.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Rule tie rate</div><div class="stat-value ${parseFloat(fireRate)>parseFloat(baseRate)?'green':''}">${fireRate}${fireRate!=='—'?'%':''}</div></div>
+    </div>`;
+
+    html+=`<table class="stbl"><thead><tr><th>Group</th><th>Hands</th><th>Ties</th><th>Tie rate</th><th>Lift vs base</th></tr></thead><tbody>`;
+    const lift=(parseFloat(fireRate)/parseFloat(baseRate));
+    html+=`<tr class="${parseFloat(fireRate)>parseFloat(baseRate)?'hot':''}"><td>Rule fired</td><td>${fired.length}</td><td>${firedTie}</td><td>${fireRate}%</td><td>${isFinite(lift)?lift.toFixed(2)+'×':'—'}</td></tr>`;
+    html+=`<tr><td>Rule quiet</td><td>${rest.length}</td><td>${restTie}</td><td>${restRate}%</td><td>—</td></tr>`;
+    html+=`</tbody></table>`;
+
+    // Tie-after-tie tracker (your double-tie bet)
+    let taT=0,taTtie=0;
+    const chrono=[...history].reverse();
+    for(let i=0;i<chrono.length-1;i++){if(chrono[i].actual==='T'){taT++;if(chrono[i+1].actual==='T')taTtie++;}}
+    html+=`<table class="stbl"><thead><tr><th>Double-tie bet (bet T after a T)</th><th>Chances</th><th>Hit</th><th>Rate</th></tr></thead>
+      <tbody><tr class="${taT&&taTtie/taT>ties/total?'hot':''}"><td>Tie follows a tie</td><td>${taT}</td><td>${taTtie}</td><td>${taT?(taTtie/taT*100).toFixed(1)+'%':'—'}</td></tr></tbody></table>`;
+
+    // Tie rate by entering-shoe bucket
+    const buckets={'≤0':[], '+1..+4':[], '+5..+9':[], '+10..+14':[], '+15+':[]};
+    history.forEach(h=>{
+      const s=h.enteringShoe;
+      if(s<=0)buckets['≤0'].push(h);
+      else if(s<=4)buckets['+1..+4'].push(h);
+      else if(s<=9)buckets['+5..+9'].push(h);
+      else if(s<=14)buckets['+10..+14'].push(h);
+      else buckets['+15+'].push(h);
+    });
+    html+=`<table class="stbl"><thead><tr><th>Entering shoe</th><th>Hands</th><th>Ties</th><th>Tie rate</th></tr></thead><tbody>`;
+    Object.entries(buckets).forEach(([k,arr])=>{
+      if(!arr.length)return;
+      const t=arr.filter(h=>h.actual==='T').length;
+      const rate=(t/arr.length*100).toFixed(1);
+      html+=`<tr class="${arr.length>=4&&t/arr.length>ties/total?'hot':''}"><td>${k}</td><td>${arr.length}</td><td>${t}</td><td>${rate}%</td></tr>`;
+    });
+    html+=`</tbody></table>`;
+
+    if(history.length<40){
+      html+=`<div style="margin-top:10px;padding:9px;background:rgba(231,76,60,0.1);border-left:3px solid var(--danger);border-radius:4px;font-size:0.8rem;color:#f0a0a0;">
+        Small sample (${history.length} hands). Need several shoes before any rate is trustworthy.</div>`;
+    }
+    el.innerHTML=html;
+  }
+
+  function switchTab(name,e){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    e.target.classList.add('active');document.getElementById(name+'Panel').classList.add('active');
+  }
+
+  function exportCSV(){
+    if(!history.length){alert('No hands recorded yet.');return;}
+    const r=ruleParams();
+    const total=history.length, ties=history.filter(h=>h.actual==='T').length;
+    const fired=history.filter(h=>h.fired), firedTie=fired.filter(h=>h.actual==='T').length;
+    const head=['Hand #','Timestamp','Cards','Card Count','Hand Sum','Entering Shoe','Shoe After','Rule Fired','Actual','Hit'];
+    const rows=[...history].reverse().map(h=>[
+      h.n,h.ts,h.cards.map(c=>c.f).join('|'),h.cards.length,h.handSum,h.enteringShoe,h.shoeAfter,
+      h.fired?'Yes':'No',{B:'Banker',P:'Player',T:'Tie'}[h.actual],
+      h.fired?(h.actual==='T'?'HIT':'MISS'):(h.actual==='T'?'TIE-no-signal':'-')
+    ]);
+    const summary=[
+      '# Baccarat Tie Predictor v2 Export',
+      `# Exported: ${new Date().toISOString()}`,
+      `# Rule: |hand sum| <= ${r.hc} AND entering shoe >= +${r.shoe}`,
+      `# Total Hands: ${total}`,
+      `# Ties: ${ties} (${(ties/total*100).toFixed(1)}%)`,
+      `# Rule fired: ${fired.length}, of which tie: ${firedTie} (${fired.length?(firedTie/fired.length*100).toFixed(1):0}%)`,
+      ''
+    ];
+    const esc=s=>{s=String(s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+    let csv=summary.join('\n')+head.map(esc).join(',')+'\n'+rows.map(r=>r.map(esc).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=`baccarat-tie-v2-${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}.csv`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('keydown',e=>{
+    if(modalOpen){const k=e.key.toLowerCase();
+      if(k==='b'){e.preventDefault();recordResult('B');}
+      else if(k==='p'){e.preventDefault();recordResult('P');}
+      else if(k==='t'){e.preventDefault();recordResult('T');}
+      else if(e.key==='Escape'){e.preventDefault();cancelResult();}
+      return;}
+    const k=e.key.toLowerCase();
+    const map={'a':0,'1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9,'t':9,'j':10,'q':11,'k':12};
+    if(k in map){e.preventDefault();addCard(map[k]);}
+    else if(e.key==='Enter'){e.preventDefault();endHand();}
+    else if(e.key==='Backspace'){e.preventDefault();undoLast();}
+  });
+
+  buildButtons();update();
+</script>
+</body>
+</html>
