@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Gap Statistics</title>
+<style>
+  :root {
+    --bg-deep: #0a1410;
+    --bg-felt: #0f2419;
+    --felt-edge: #1a3a2a;
+    --gold: #d4af37;
+    --gold-bright: #f4cf57;
+    --cream: #f5ebd0;
+    --banker: #c0392b;
+    --banker-dark: #8e2620;
+    --player: #2980b9;
+    --player-dark: #1f5f8b;
+    --streak: #e0a020;     /* follow / leader extends */
+    --chop:   #1ab6a6;
+    --chop2:  #17a89a;
+    --green-bright: #4ade80;
+    --danger: #e74c3c;
+    --neutral: #6b7c75;
+    --shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: radial-gradient(ellipse at center, var(--bg-felt) 0%, var(--bg-deep) 100%);
+    color: var(--cream);
+    min-height: 100vh;
+    padding: 20px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  }
+  h1 {
+    font-size: 1.9rem;
+    font-weight: normal;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    text-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  }
+  .subtitle {
+    font-size: 0.78rem;
+    color: var(--neutral);
+    letter-spacing: 0.26em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  .tally-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .tally-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 22px 18px;
+    cursor: pointer;
+    color: white;
+    font-family: 'Georgia', serif;
+    transition: transform 0.08s ease, filter 0.12s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .tally-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+  .tally-btn:active { transform: translateY(0) scale(0.97); }
+  .tally-btn.banker {
+    background: linear-gradient(150deg, var(--banker), var(--banker-dark));
+    box-shadow: 0 6px 20px rgba(192, 57, 43, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .tally-btn.player {
+    background: linear-gradient(150deg, var(--player), var(--player-dark));
+    box-shadow: 0 6px 20px rgba(41, 128, 185, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .tally-btn .label { font-size: 1.05rem; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.92; }
+  .tally-btn .count { font-size: 3rem; font-weight: bold; font-family: 'Courier New', monospace; line-height: 1.1; margin-top: 2px; }
+  .tally-btn .hotkey { position: absolute; top: 10px; right: 14px; font-size: 0.7rem; letter-spacing: 0.15em; opacity: 0.5; }
+
+  /* Difference panel */
+  .diff-panel {
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+    text-align: center;
+    border: 2px solid var(--felt-edge);
+    background: linear-gradient(145deg, #142820, #0c1c14);
+    box-shadow: var(--shadow);
+    transition: all 0.25s ease;
+  }
+  .diff-panel.drawdown { border-color: var(--danger); box-shadow: 0 0 35px rgba(231,76,60,0.35); }
+  .diff-panel .diff-label { font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--neutral); }
+  .diff-panel .diff-number { font-size: 4.5rem; font-weight: bold; font-family: 'Courier New', monospace; line-height: 1; color: var(--gold-bright); }
+  .diff-panel.drawdown .diff-number { color: var(--danger); }
+  .diff-panel .diff-leader { font-size: 1rem; letter-spacing: 0.12em; margin-top: 4px; color: var(--cream); }
+
+  /* Next bet banner */
+  .bet-panel {
+    border-radius: 14px;
+    padding: 16px 22px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 2px solid var(--felt-edge);
+    background: linear-gradient(145deg,#142820,#0c1c14);
+    transition: all 0.25s ease;
+  }
+  .bet-panel .bet-left { display: flex; flex-direction: column; text-align: left; }
+  .bet-panel .bet-label { font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--neutral); }
+  .bet-panel .bet-note { font-size: 0.78rem; color: var(--neutral); margin-top: 4px; font-family: 'Courier New', monospace; }
+  .bet-panel .bet-rec { font-size: 1.9rem; font-weight: bold; letter-spacing: 0.12em; font-family: 'Georgia', serif; white-space: nowrap; color: var(--neutral); }
+  .bet-panel.bet-banker { background: linear-gradient(150deg, var(--banker), var(--banker-dark)); border-color: #e8786b; box-shadow: 0 0 34px rgba(192,57,43,0.5); }
+  .bet-panel.bet-player { background: linear-gradient(150deg, var(--player), var(--player-dark)); border-color: #6bb6e8; box-shadow: 0 0 34px rgba(41,128,185,0.5); }
+  .bet-panel.bet-banker .bet-rec, .bet-panel.bet-banker .bet-label, .bet-panel.bet-banker .bet-note,
+  .bet-panel.bet-player .bet-rec, .bet-panel.bet-player .bet-label, .bet-panel.bet-player .bet-note { color: #fff; }
+  .bet-panel.bet-banker .bet-note, .bet-panel.bet-player .bet-note { opacity: 0.88; }
+
+  /* Section title */
+  .section-title {
+    font-size: 0.74rem;
+    letter-spacing: 0.24em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin: 0 0 4px 2px;
+    font-weight: normal;
+  }
+  .section-title .sub { color: var(--neutral); letter-spacing: 0.08em; text-transform: none; font-size: 0.95em; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin: 0 0 12px 2px;
+    font-size: 0.72rem;
+    color: var(--neutral);
+    flex-wrap: wrap;
+  }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .dot.streak { background: var(--streak); }
+  .dot.chop { background: var(--chop2); }
+  .dot.none { background: #2a3a32; }
+
+  /* Gap grid */
+  .gap-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .gap-cell {
+    background: linear-gradient(145deg, #142820, #0c1c14);
+    border: 1px solid var(--felt-edge);
+    border-left: 4px solid #2a3a32;
+    border-radius: 10px;
+    padding: 8px 6px 7px;
+    text-align: center;
+    transition: all 0.18s ease;
+    position: relative;
+    min-height: 78px;
+  }
+  .gap-cell.streak { border-left-color: var(--streak); }
+  .gap-cell.chop   { border-left-color: var(--chop2); }
+  .gap-cell.current {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(212,175,55,0.45);
+    transform: translateY(-2px);
+  }
+  .gap-cell .g-num { font-size: 1.15rem; font-weight: bold; color: var(--cream); font-family: 'Courier New', monospace; line-height: 1; }
+  .gap-cell .g-occ { font-size: 0.68rem; color: var(--neutral); margin-top: 2px; font-family: 'Courier New', monospace; }
+  .gap-cell .g-tend {
+    margin-top: 5px;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: bold;
+    line-height: 1.1;
+  }
+  .gap-cell.streak .g-tend { color: var(--streak); }
+  .gap-cell.chop   .g-tend { color: var(--chop2); }
+  .gap-cell.none   .g-tend { color: #44544c; }
+  .gap-cell .g-pct { font-size: 0.62rem; color: var(--neutral); font-family: 'Courier New', monospace; }
+  .gap-cell .g-shoe {
+    position: absolute; top: 4px; right: 6px;
+    font-size: 0.58rem; color: var(--gold); opacity: 0.7;
+    font-family: 'Courier New', monospace;
+  }
+
+  .meta-line {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    font-size: 0.78rem; color: var(--neutral); font-family: 'Courier New', monospace;
+    margin-bottom: 18px; padding: 0 2px;
+  }
+  .meta-line strong { color: var(--cream); }
+
+  /* Sequence strip */
+  .seq-strip {
+    background: linear-gradient(145deg, #0c1c14, #0a1812);
+    border: 1px solid var(--felt-edge);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    min-height: 48px;
+    display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start;
+    max-height: 120px; overflow-y: auto;
+  }
+  .bead {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: bold; color: white; font-family: 'Courier New', monospace;
+  }
+  .bead.B { background: var(--banker); }
+  .bead.P { background: var(--player); }
+  .bead.recent { box-shadow: 0 0 0 2px var(--gold); }
+  .seq-empty { color: var(--neutral); font-style: italic; font-size: 0.85rem; align-self: center; }
+
+  /* Controls */
+  .controls-row { display: grid; gap: 9px; margin-bottom: 10px; }
+  .controls-row.two { grid-template-columns: 1fr 1fr; }
+  .controls-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  button.action {
+    padding: 13px;
+    border: none; border-radius: 10px;
+    font-family: 'Georgia', serif; font-size: 0.86rem;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    transition: all 0.15s ease; font-weight: bold;
+  }
+  .newshoe-btn { background: linear-gradient(145deg, var(--gold-bright), var(--gold)); color: #1a1a1a; box-shadow: 0 4px 12px rgba(212,175,55,0.4); }
+  .newshoe-btn:hover { transform: translateY(-2px); }
+  .undo-btn { background: #3a4a42; color: var(--cream); border: 1px solid var(--felt-edge); }
+  .undo-btn:hover { background: #4a5a52; }
+  .save-btn, .load-btn, .export-btn { background: #1e4a2a; color: var(--cream); border: 1px solid #2e6a3a; }
+  .save-btn:hover, .load-btn:hover, .export-btn:hover { background: #2a5a36; }
+  .reset-btn { background: #4a2020; color: var(--cream); border: 1px solid #6a3030; }
+  .reset-btn:hover { background: #5a3030; }
+  .clear-btn { background: #3a1414; color: #f0a0a0; border: 1px solid #6a2020; }
+  .clear-btn:hover { background: #4a1a1a; }
+
+  .pooled-status {
+    text-align: center; font-size: 0.74rem; color: var(--neutral);
+    margin: 14px 0 4px; font-family: 'Courier New', monospace; letter-spacing: 0.05em;
+  }
+  .pooled-status strong { color: var(--gold); }
+
+  .keyboard-hint {
+    text-align: center; margin-top: 14px;
+    font-size: 0.72rem; color: var(--neutral); letter-spacing: 0.08em; line-height: 1.6;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+  ::-webkit-scrollbar-thumb { background: var(--felt-edge); border-radius: 4px; }
+
+  @media (max-width: 640px) {
+    .gap-grid { grid-template-columns: repeat(5, 1fr); }
+    .tally-btn .count { font-size: 2.4rem; }
+    .diff-panel .diff-number { font-size: 3.4rem; }
+    .controls-row.three { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GAP STATISTICS</h1>
+      <div class="subtitle">Track every gap · Follow or Switch · Pool across shoes</div>
+    </header>
+
+    <div class="tally-buttons">
+      <button class="tally-btn banker" onclick="record('B')">
+        <span class="hotkey">B</span>
+        <div class="label">Banker</div>
+        <div class="count" id="bankerCount">0</div>
+      </button>
+      <button class="tally-btn player" onclick="record('P')">
+        <span class="hotkey">P</span>
+        <div class="label">Player</div>
+        <div class="count" id="playerCount">0</div>
+      </button>
+    </div>
+
+    <div class="diff-panel" id="diffPanel">
+      <div class="diff-label">Current Gap</div>
+      <div class="diff-number" id="diffNumber">0</div>
+      <div class="diff-leader" id="diffLeader">Even</div>
+    </div>
+
+    <div class="bet-panel" id="betPanel">
+      <div class="bet-left">
+        <span class="bet-label">Next Bet</span>
+        <span class="bet-note" id="betNote">Record hands to build the gap stats</span>
+      </div>
+      <span class="bet-rec" id="betRec">—</span>
+    </div>
+
+    <h3 class="section-title">Gap Outcomes <span class="sub">— what happens on the next hand from each gap</span></h3>
+    <div class="legend">
+      <span><span class="dot streak"></span>Streak (leader extends → follow)</span>
+      <span><span class="dot chop"></span>Chop (trailer wins → switch)</span>
+      <span><span class="dot none"></span>No data yet</span>
+      <span style="color:var(--gold)">small number = this shoe</span>
+    </div>
+    <div class="gap-grid" id="gapGrid"></div>
+
+    <div class="meta-line">
+      <span>This shoe — hands: <strong id="shoeHands">0</strong> · outcomes: <strong id="shoeOutcomes">0</strong></span>
+      <span>Pooled outcomes: <strong id="pooledOutcomes">0</strong></span>
+    </div>
+
+    <h3 class="section-title">Sequence <span class="sub">— this shoe</span></h3>
+    <div class="seq-strip" id="seqStrip">
+      <span class="seq-empty">No hands yet — press Banker or Player</span>
+    </div>
+
+    <div class="controls-row two">
+      <button class="action newshoe-btn" onclick="newShoe()">✓ Bank Shoe · New Shoe</button>
+      <button class="action undo-btn" onclick="undo()">↶ Undo Last Hand</button>
+    </div>
+    <div class="controls-row three">
+      <button class="action save-btn" onclick="saveProgress()">💾 Save Progress</button>
+      <button class="action load-btn" onclick="document.getElementById('loadFile').click()">📂 Load Progress</button>
+      <button class="action export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div class="controls-row two">
+      <button class="action reset-btn" onclick="resetShoe()">Discard Current Shoe</button>
+      <button class="action clear-btn" onclick="clearAll()">Clear All Pooled Data</button>
+    </div>
+
+    <input type="file" id="loadFile" accept=".json,application/json" style="display:none" onchange="loadProgress(event)">
+
+    <div class="pooled-status" id="pooledStatus">Pooled data: empty · use Save / Load to carry stats across sessions</div>
+
+    <div class="keyboard-hint">
+      Keyboard: B = Banker · P = Player · Backspace = Undo &nbsp;|&nbsp; Ties: don't press anything (not counted)<br>
+      "Bank Shoe" folds the current shoe into the pooled stats and starts a fresh shoe. Save downloads a file you reload next session.
+    </div>
+  </div>
+
+<script>
+  // ---- Config ----
+  const MAX_GAP = 20;                 // individual squares 1..20, then "20+"
+  const DRAWDOWN_WARN = 11;           // gap at/above this tints the panel red (risk flag only)
+  const GAP_KEYS = [];
+  for (let i = 1; i <= MAX_GAP; i++) GAP_KEYS.push(String(i));
+  GAP_KEYS.push(MAX_GAP + '+');
+
+  // ---- State ----
+  // sequence entries store enough to undo stats exactly:
+  //   { side:'B'|'P', prevGap:int, prevLeader:'B'|'P'|null }
+  let sequence = [];
+  let bankerCount = 0;
+  let playerCount = 0;
+
+  let shoeStats = emptyStats();   // current shoe gap outcomes
+  let allTime   = emptyStats();   // banked previous shoes + loaded data
+  let pooledLoadedMeta = null;    // info about loaded file
+
+  function emptyStats() {
+    const s = {};
+    GAP_KEYS.forEach(k => s[k] = { occ: 0, streak: 0, chop: 0 });
+    return s;
+  }
+  function gapKey(g) {
+    if (g > MAX_GAP) return MAX_GAP + '+';
+    return String(g);
+  }
+  function addOutcome(store, key, outcome) {
+    store[key].occ++;
+    store[key][outcome]++;
+  }
+  function removeOutcome(store, key, outcome) {
+    store[key].occ--;
+    store[key][outcome]--;
+  }
+  function combine(a, b) {
+    const c = emptyStats();
+    GAP_KEYS.forEach(k => {
+      c[k].occ    = a[k].occ + b[k].occ;
+      c[k].streak = a[k].streak + b[k].streak;
+      c[k].chop   = a[k].chop + b[k].chop;
+    });
+    return c;
+  }
+  function totalOcc(store) {
+    return GAP_KEYS.reduce((sum, k) => sum + store[k].occ, 0);
+  }
+
+  // ---- Recording ----
+  function record(side) {
+    const prevGap = Math.abs(bankerCount - playerCount);
+    const prevLeader = bankerCount > playerCount ? 'B' : (playerCount > bankerCount ? 'P' : null);
+
+    sequence.push({ side, prevGap, prevLeader });
+    if (side === 'B') bankerCount++; else playerCount++;
+
+    // resolve the previous gap (only meaningful when there was a leader, i.e. gap >= 1)
+    if (prevLeader !== null) {
+      const key = gapKey(prevGap);
+      const outcome = (side === prevLeader) ? 'streak' : 'chop';
+      addOutcome(shoeStats, key, outcome);
+    }
+    update();
+  }
+
+  function undo() {
+    if (sequence.length === 0) return;
+    const last = sequence.pop();
+    if (last.side === 'B') bankerCount--; else playerCount--;
+    if (last.prevLeader !== null) {
+      const key = gapKey(last.prevGap);
+      const outcome = (last.side === last.prevLeader) ? 'streak' : 'chop';
+      removeOutcome(shoeStats, key, outcome);
+    }
+    update();
+  }
+
+  function newShoe() {
+    if (sequence.length === 0) { alert('No hands in the current shoe to bank.'); return; }
+    if (!confirm('Bank this shoe into the pooled stats and start a fresh shoe?')) return;
+    allTime = combine(allTime, shoeStats);
+    shoeStats = emptyStats();
+    sequence = [];
+    bankerCount = 0;
+    playerCount = 0;
+    update();
+  }
+
+  function resetShoe() {
+    if (!confirm('Discard the current shoe? Its outcomes will NOT be added to pooled data.')) return;
+    shoeStats = emptyStats();
+    sequence = [];
+    bankerCount = 0;
+    playerCount = 0;
+    update();
+  }
+
+  function clearAll() {
+    if (!confirm('Clear ALL pooled data and the current shoe? This cannot be undone. Save first if you want to keep it.')) return;
+    allTime = emptyStats();
+    shoeStats = emptyStats();
+    sequence = [];
+    bankerCount = 0;
+    playerCount = 0;
+    pooledLoadedMeta = null;
+    update();
+  }
+
+  // ---- Display ----
+  function update() {
+    const gap = Math.abs(bankerCount - playerCount);
+    const leader = bankerCount > playerCount ? 'B' : (playerCount > bankerCount ? 'P' : null);
+    const pooled = combine(allTime, shoeStats);
+
+    document.getElementById('bankerCount').textContent = bankerCount;
+    document.getElementById('playerCount').textContent = playerCount;
+
+    // difference panel
+    const panel = document.getElementById('diffPanel');
+    panel.classList.toggle('drawdown', gap >= DRAWDOWN_WARN);
+    document.getElementById('diffNumber').textContent = gap;
+    const leadEl = document.getElementById('diffLeader');
+    if (leader === 'B') leadEl.textContent = 'Banker leads by ' + gap;
+    else if (leader === 'P') leadEl.textContent = 'Player leads by ' + gap;
+    else leadEl.textContent = 'Even';
+
+    // next bet — driven by pooled stats for the current gap
+    updateBet(gap, leader, pooled);
+
+    // gap grid
+    renderGrid(gap, pooled);
+
+    // meta
+    document.getElementById('shoeHands').textContent = sequence.length;
+    document.getElementById('shoeOutcomes').textContent = totalOcc(shoeStats);
+    document.getElementById('pooledOutcomes').textContent = totalOcc(pooled);
+
+    // sequence strip
+    renderSequence();
+
+    // pooled status line
+    const pStat = document.getElementById('pooledStatus');
+    const banked = totalOcc(allTime);
+    if (banked === 0 && !pooledLoadedMeta) {
+      pStat.innerHTML = 'Pooled data: empty · use Save / Load to carry stats across sessions';
+    } else {
+      let msg = `Pooled (banked) outcomes: <strong>${banked}</strong>`;
+      if (pooledLoadedMeta) msg += ` · loaded from file saved ${pooledLoadedMeta}`;
+      msg += ' · current shoe adds on live';
+      pStat.innerHTML = msg;
+    }
+  }
+
+  function updateBet(gap, leader, pooled) {
+    const betPanel = document.getElementById('betPanel');
+    const betRec = document.getElementById('betRec');
+    const betNote = document.getElementById('betNote');
+    betPanel.classList.remove('bet-banker', 'bet-player');
+
+    if (gap === 0 || leader === null) {
+      betRec.textContent = 'WAIT';
+      betNote.textContent = 'No leader yet (gap 0)';
+      return;
+    }
+
+    const key = gapKey(gap);
+    const st = pooled[key];
+    if (st.occ === 0) {
+      betRec.textContent = 'NO DATA';
+      betNote.textContent = `Gap ${gap}: no outcomes recorded yet — collecting`;
+      return;
+    }
+
+    const followPct = st.streak / st.occ;     // leader extended
+    const switchPct = st.chop / st.occ;        // trailer won
+    const trailer = leader === 'B' ? 'P' : 'B';
+
+    let betSide, lean, pct;
+    if (followPct >= switchPct) {
+      betSide = leader;          // follow the leader
+      lean = 'follow';
+      pct = followPct;
+    } else {
+      betSide = trailer;         // switch to trailer
+      lean = 'switch';
+      pct = switchPct;
+    }
+
+    const sideName = betSide === 'B' ? 'BANKER' : 'PLAYER';
+    betPanel.classList.add(betSide === 'B' ? 'bet-banker' : 'bet-player');
+    betRec.textContent = 'BET ' + sideName;
+    betNote.textContent =
+      `Gap ${gap}: ${lean} ${(pct * 100).toFixed(0)}% over ${st.occ} sample${st.occ === 1 ? '' : 's'}` +
+      (st.occ < 10 ? ' · low confidence' : '');
+  }
+
+  function renderGrid(currentGap, pooled) {
+    const grid = document.getElementById('gapGrid');
+    let html = '';
+    GAP_KEYS.forEach(k => {
+      const ps = pooled[k];
+      const ss = shoeStats[k];
+      let cls = 'none', tend = '—', pctTxt = '';
+      if (ps.occ > 0) {
+        const followPct = ps.streak / ps.occ;
+        if (ps.streak > ps.chop) { cls = 'streak'; tend = 'Streak'; pctTxt = (followPct * 100).toFixed(0) + '%'; }
+        else if (ps.chop > ps.streak) { cls = 'chop'; tend = 'Chop'; pctTxt = ((ps.chop / ps.occ) * 100).toFixed(0) + '%'; }
+        else { cls = 'none'; tend = 'Even'; pctTxt = '50%'; }
+      }
+      const isCurrent = (gapKey(currentGap) === k && currentGap >= 1);
+      const shoeBadge = ss.occ > 0 ? `<span class="g-shoe">${ss.occ}</span>` : '';
+      html += `
+        <div class="gap-cell ${cls}${isCurrent ? ' current' : ''}">
+          ${shoeBadge}
+          <div class="g-num">${k}</div>
+          <div class="g-occ">${ps.occ}×</div>
+          <div class="g-tend">${tend}</div>
+          <div class="g-pct">${pctTxt}</div>
+        </div>`;
+    });
+    grid.innerHTML = html;
+  }
+
+  function renderSequence() {
+    const strip = document.getElementById('seqStrip');
+    if (sequence.length === 0) {
+      strip.innerHTML = '<span class="seq-empty">No hands yet — press Banker or Player</span>';
+      return;
+    }
+    let html = '';
+    for (let i = 0; i < sequence.length; i++) {
+      const s = sequence[i].side;
+      const recent = (i === sequence.length - 1) ? ' recent' : '';
+      html += `<span class="bead ${s}${recent}">${s}</span>`;
+    }
+    strip.innerHTML = html;
+    strip.scrollTop = strip.scrollHeight;
+  }
+
+  // ---- Save / Load (Option B: manual file) ----
+  function saveProgress() {
+    const pooled = combine(allTime, shoeStats);   // include current shoe so nothing is lost
+    if (totalOcc(pooled) === 0) { alert('Nothing to save yet.'); return; }
+    const payload = {
+      app: 'baccarat-gap-stats',
+      version: 1,
+      savedAt: new Date().toISOString(),
+      maxGap: MAX_GAP,
+      stats: pooled
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `baccarat-gap-progress-${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function loadProgress(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.stats) throw new Error('No stats found in file.');
+        const loaded = emptyStats();
+        GAP_KEYS.forEach(k => {
+          if (data.stats[k]) {
+            loaded[k].occ    = data.stats[k].occ || 0;
+            loaded[k].streak = data.stats[k].streak || 0;
+            loaded[k].chop   = data.stats[k].chop || 0;
+          }
+        });
+        const replace = confirm(
+          'Load this file as the pooled baseline?\n\n' +
+          'OK = REPLACE pooled data with the file\n' +
+          'Cancel = MERGE the file into your current pooled data'
+        );
+        if (replace) {
+          allTime = loaded;
+        } else {
+          allTime = combine(allTime, loaded);
+        }
+        pooledLoadedMeta = data.savedAt ? new Date(data.savedAt).toLocaleString() : 'unknown date';
+        update();
+        alert('Loaded. Pooled outcomes now: ' + totalOcc(combine(allTime, shoeStats)));
+      } catch (err) {
+        alert('Could not load file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';   // allow re-loading same file
+  }
+
+  // ---- CSV export ----
+  function exportCSV() {
+    const pooled = combine(allTime, shoeStats);
+    if (totalOcc(pooled) === 0) { alert('No data to export yet.'); return; }
+
+    const lines = [];
+    lines.push('# Baccarat Gap Statistics Export');
+    lines.push(`# Exported: ${new Date().toISOString()}`);
+    lines.push(`# This shoe hands: ${sequence.length}`);
+    lines.push(`# This shoe outcomes: ${totalOcc(shoeStats)}`);
+    lines.push(`# Pooled outcomes: ${totalOcc(pooled)}`);
+    lines.push('# Follow = leader extended (streak). Switch = trailing side won (chop).');
+    lines.push('');
+
+    const header = [
+      'Gap',
+      'Shoe Occ', 'Shoe Follow', 'Shoe Switch', 'Shoe Follow%',
+      'Pooled Occ', 'Pooled Follow', 'Pooled Switch', 'Pooled Follow%',
+      'Pooled Tendency'
+    ];
+    lines.push(header.join(','));
+
+    GAP_KEYS.forEach(k => {
+      const ss = shoeStats[k];
+      const ps = pooled[k];
+      const sFollowPct = ss.occ ? (ss.streak / ss.occ * 100).toFixed(1) : '';
+      const pFollowPct = ps.occ ? (ps.streak / ps.occ * 100).toFixed(1) : '';
+      let tendency = '';
+      if (ps.occ > 0) tendency = ps.streak > ps.chop ? 'Streak' : (ps.chop > ps.streak ? 'Chop' : 'Even');
+      lines.push([
+        k,
+        ss.occ, ss.streak, ss.chop, sFollowPct,
+        ps.occ, ps.streak, ps.chop, pFollowPct,
+        tendency
+      ].join(','));
+    });
+
+    // full sequence of current shoe for reference
+    lines.push('');
+    lines.push('Current Shoe Sequence,' + sequence.map(s => s.side).join('|'));
+
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `baccarat-gap-stats-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---- Keyboard ----
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'b') { e.preventDefault(); record('B'); }
+    else if (k === 'p') { e.preventDefault(); record('P'); }
+    else if (e.key === 'Backspace') { e.preventDefault(); undo(); }
+  });
+
+  update();
+</script>
+</body>
+</html>
