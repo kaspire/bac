@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three Systems · Baccarat Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt:#0a3d2e; --felt-deep:#06211a; --felt-edge:#072a20;
+    --gold:#c9a227; --gold-bright:#e3c45a;
+    --cream:#f3ecd8; --cream-dim:#c9c0a8;
+    --banker:#c0392b; --banker-glow:#e35b4c;
+    --player:#2f6fb0; --player-glow:#4d8fd6;
+    --tie:#1f9a5a; --tie-glow:#36c47e;
+    --line:rgba(201,162,39,.22);
+    --panel:rgba(0,0,0,.28); --panel-2:rgba(0,0,0,.4);
+    --pos:#5fd39a; --neg:var(--banker-glow);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family:'Outfit',sans-serif;color:var(--cream);
+    background:radial-gradient(140% 100% at 50% -10%, #11543f 0%, var(--felt) 40%, var(--felt-deep) 100%);
+    padding:24px 16px 60px;position:relative;overflow-x:hidden;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.45;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+  }
+  .wrap{max-width:1120px;margin:0 auto;position:relative;z-index:1}
+
+  header{text-align:center;margin-bottom:24px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.42em;
+    text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:8px}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(32px,6vw,52px);
+    line-height:.95;color:var(--cream)}
+  h1 em{font-style:italic;color:var(--gold-bright)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin-bottom:16px;backdrop-filter:blur(3px);
+    box-shadow:0 14px 30px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04);}
+  .card-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold-bright);
+    margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .card-title .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+  .card-title .pl{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600}
+
+  /* Total banner */
+  .total-banner{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px}
+  .tb-cell{background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.5));padding:18px 18px;text-align:center}
+  .tb-cell .k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:6px}
+  .tb-cell .v{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700}
+  .tb-cell .v.pos{color:var(--pos)}.tb-cell .v.neg{color:var(--neg)}
+  .tb-cell .s{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cream-dim);margin-top:4px}
+
+  /* Recommendation grid */
+  .rec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+  .rec{padding:14px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);
+    text-align:center;transition:all .2s;position:relative}
+  .rec .sysname{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:6px;font-family:'JetBrains Mono',monospace}
+  .rec .action{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;line-height:1;color:var(--cream-dim)}
+  .rec .why{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--cream-dim);margin-top:6px;letter-spacing:.05em;min-height:12px}
+  .rec.bet{border-color:var(--gold);background:linear-gradient(180deg,rgba(201,162,39,.18),rgba(0,0,0,.42));
+    box-shadow:0 0 0 1px var(--gold),0 0 22px -8px var(--gold-bright)}
+  .rec.bet .action{color:var(--gold-bright)}
+  .rec.bet.B .action{color:var(--banker-glow)}
+  .rec.bet.P .action{color:var(--player-glow)}
+  .rec.off{opacity:.35}
+  .rec .toggle{position:absolute;top:6px;right:7px;width:24px;height:14px;border-radius:8px;
+    background:rgba(0,0,0,.5);border:1px solid var(--line);cursor:pointer;transition:.2s}
+  .rec .toggle::after{content:"";position:absolute;top:1px;left:1px;width:10px;height:10px;border-radius:50%;
+    background:var(--cream-dim);transition:.2s}
+  .rec:not(.off) .toggle{background:rgba(201,162,39,.35);border-color:var(--gold)}
+  .rec:not(.off) .toggle::after{transform:translateX(10px);background:var(--gold-bright)}
+
+  /* Input buttons */
+  .input-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+  .bigbtn{padding:22px 8px;border-radius:14px;border:1px solid rgba(255,255,255,.12);cursor:pointer;
+    font-family:'Cormorant Garamond',serif;font-weight:600;color:#fff;transition:transform .1s,box-shadow .15s;
+    box-shadow:0 10px 22px -14px rgba(0,0,0,.8);position:relative}
+  .bigbtn:hover{transform:translateY(-2px);box-shadow:0 14px 28px -14px rgba(0,0,0,.9)}
+  .bigbtn:active{transform:translateY(0)}
+  .bigbtn .big{font-size:30px;display:block;line-height:1}
+  .bigbtn .small{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;opacity:.85;display:block;margin-top:4px}
+  .bigbtn.P{background:radial-gradient(circle at 40% 30%,var(--player-glow),var(--player))}
+  .bigbtn.B{background:radial-gradient(circle at 40% 30%,var(--banker-glow),var(--banker))}
+  .bigbtn.T{background:radial-gradient(circle at 40% 30%,var(--tie-glow),var(--tie))}
+
+  .mini-row{display:flex;gap:10px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
+  .btn{font-family:'Outfit',sans-serif;font-weight:500;font-size:13px;letter-spacing:.02em;
+    border:1px solid var(--line);border-radius:9px;padding:9px 18px;cursor:pointer;
+    background:var(--panel-2);color:var(--cream-dim);transition:all .18s}
+  .btn:hover{color:var(--cream);border-color:var(--cream-dim)}
+
+  /* Boards */
+  .board-section{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+  @media (min-width:780px){.board-section{grid-template-columns:1fr 1fr}}
+  .board-label{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream-dim);
+    margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .board-label .hint{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;opacity:.7}
+
+  .bead{display:grid;grid-template-rows:repeat(6,28px);grid-auto-flow:column;grid-auto-columns:28px;
+    gap:3px;overflow-x:auto;padding:3px 3px 8px;background:rgba(0,0,0,.22);
+    border:1px solid var(--line);border-radius:10px;min-height:182px}
+  .cell{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#fff;position:relative}
+  .cell.B{background:radial-gradient(circle at 35% 30%,var(--banker-glow),var(--banker))}
+  .cell.P{background:radial-gradient(circle at 35% 30%,var(--player-glow),var(--player))}
+  .cell.T{background:radial-gradient(circle at 35% 30%,var(--tie-glow),var(--tie))}
+  .cell.col-start::before{content:"";position:absolute;left:-2px;top:0;bottom:0;width:2px;
+    background:var(--gold);border-radius:2px;opacity:.55}
+
+  /* Main board */
+  .mainboard{display:grid;grid-template-rows:repeat(6,22px);grid-auto-flow:column;grid-auto-columns:22px;
+    gap:2px;overflow-x:auto;padding:3px;background:rgba(0,0,0,.22);
+    border:1px solid var(--line);border-radius:10px;min-height:142px}
+  .mb-cell{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:transparent;position:relative}
+  .mb-cell.B{background:radial-gradient(circle at 35% 30%,var(--banker-glow),var(--banker))}
+  .mb-cell.P{background:radial-gradient(circle at 35% 30%,var(--player-glow),var(--player))}
+  .mb-cell.empty{background:transparent}
+  .mb-cell .ties{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--tie-glow);font-size:11px;font-weight:700;text-shadow:0 0 3px rgba(0,0,0,.7)}
+  .mb-cell.empty .ties{color:var(--tie-glow)}
+
+  /* System cards */
+  .systems{display:grid;grid-template-columns:1fr;gap:14px}
+  @media (min-width:780px){.systems{grid-template-columns:repeat(3,1fr)}}
+  .sys-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .sys-card.off{opacity:.4}
+  .sys-card h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold-bright);margin-bottom:4px}
+  .sys-card .desc{font-size:11px;color:var(--cream-dim);line-height:1.45;margin-bottom:10px;font-weight:300}
+  .sys-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px}
+  .sys-stats .row{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+  .sys-stats .k{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:3px}
+  .sys-stats .v{font-size:14px;font-weight:600;color:var(--cream)}
+  .sys-stats .v.pos{color:var(--pos)}.sys-stats .v.neg{color:var(--neg)}
+  .sys-state{margin-top:10px;padding:8px 10px;background:var(--panel-2);border-radius:7px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cream-dim);line-height:1.5}
+  .sys-state b{color:var(--gold-bright);font-weight:600}
+
+  /* Ticker */
+  .ticker{max-height:280px;overflow-y:auto;background:rgba(0,0,0,.25);
+    border:1px solid var(--line);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .trow{display:grid;grid-template-columns:38px 50px 1fr 1fr 1fr;gap:6px;padding:6px 12px;
+    border-bottom:1px solid rgba(201,162,39,.08);align-items:center}
+  .trow.head{position:sticky;top:0;background:var(--felt-edge);color:var(--gold);font-size:9.5px;
+    letter-spacing:.1em;text-transform:uppercase;z-index:1}
+  .trow .res{font-weight:700;text-align:center}
+  .res.B{color:var(--banker-glow)}.res.P{color:var(--player-glow)}.res.T{color:var(--tie-glow)}
+  .sysact{font-size:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .pill{padding:1px 6px;border-radius:4px;font-size:9.5px;letter-spacing:.04em}
+  .pill.win{background:rgba(95,211,154,.18);color:var(--pos)}
+  .pill.loss{background:rgba(227,91,76,.18);color:var(--neg)}
+  .pill.push{background:rgba(201,162,39,.14);color:var(--gold-bright)}
+  .pill.bet{background:rgba(255,255,255,.06);color:var(--cream-dim)}
+  .pill.idle{color:var(--cream-dim);opacity:.4}
+
+  .note{font-size:12px;color:var(--cream-dim);line-height:1.6;margin-top:14px;
+    padding-left:12px;border-left:2px solid var(--gold);font-weight:300}
+  .note b{color:var(--cream);font-weight:500}
+
+  footer{text-align:center;margin-top:28px;font-size:10px;color:var(--cream-dim);
+    font-family:'JetBrains Mono',monospace;letter-spacing:.1em;opacity:.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Live Tracker · Three Systems</div>
+    <h1>The <em>Three</em> Hands</h1>
+  </header>
+
+  <!-- Recommendation per system -->
+  <div class="rec-grid" id="recGrid">
+    <div class="rec off" data-sys="s1">
+      <div class="toggle" data-toggle="s1"></div>
+      <div class="sysname">SYS 1 · Bead Col</div>
+      <div class="action" id="rec_s1">WAIT</div>
+      <div class="why" id="why_s1">—</div>
+    </div>
+    <div class="rec off" data-sys="s2">
+      <div class="toggle" data-toggle="s2"></div>
+      <div class="sysname">SYS 2 · Big Road</div>
+      <div class="action" id="rec_s2">WAIT</div>
+      <div class="why" id="why_s2">—</div>
+    </div>
+    <div class="rec off" data-sys="s3">
+      <div class="toggle" data-toggle="s3"></div>
+      <div class="sysname">SYS 3 · 10-Col Repeat</div>
+      <div class="action" id="rec_s3">WAIT</div>
+      <div class="why" id="why_s3">—</div>
+    </div>
+  </div>
+
+  <!-- Total + stake -->
+  <div class="total-banner">
+    <div class="tb-cell">
+      <div class="k">Total P/L</div>
+      <div class="v" id="totalPL">$0</div>
+      <div class="s" id="totalSub">no bets yet</div>
+    </div>
+    <div class="tb-cell">
+      <div class="k">Next Hand Stake</div>
+      <div class="v" id="totalStake">$0</div>
+      <div class="s" id="totalStakeSub">no system armed</div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="card">
+    <div class="input-row">
+      <button class="bigbtn P" data-r="P"><span class="big">P</span><span class="small">PLAYER</span></button>
+      <button class="bigbtn B" data-r="B"><span class="big">B</span><span class="small">BANKER</span></button>
+      <button class="bigbtn T" data-r="T"><span class="big">T</span><span class="small">TIE</span></button>
+    </div>
+    <div class="mini-row">
+      <button class="btn" id="undoBtn">↶ Undo Last</button>
+      <button class="btn" id="resetBtn">⟲ New Shoe</button>
+    </div>
+  </div>
+
+  <!-- Boards -->
+  <div class="board-section">
+    <div class="card">
+      <div class="board-label">Bead Board <span class="hint" id="beadHint">— hands</span></div>
+      <div class="bead" id="bead"></div>
+    </div>
+    <div class="card">
+      <div class="board-label">Big Road (Main) <span class="hint" id="mainHint">— cols</span></div>
+      <div class="mainboard" id="mainboard"></div>
+    </div>
+  </div>
+
+  <!-- System cards -->
+  <div class="systems" id="sysCards">
+    <div class="sys-card" data-sys="s1">
+      <h3>System 1 · Bead Column</h3>
+      <div class="desc">Within each 6-hand bead column: bet to repeat the 1st outcome, free hand on a loss, then chase the leader. Tie at position 1 voids the column.</div>
+      <div class="sys-stats">
+        <div class="row"><div class="k">P/L</div><div class="v" id="s1_pl">$0</div></div>
+        <div class="row"><div class="k">W / L / Push</div><div class="v" id="s1_wlp">0/0/0</div></div>
+      </div>
+      <div class="sys-state" id="s1_state">Idle — waiting for first bead column</div>
+    </div>
+    <div class="sys-card" data-sys="s2">
+      <h3>System 2 · Big Road Reverse</h3>
+      <div class="desc">Wait for two single columns (BP or PB), then a 3-streak. On a confirmed [1,1,3] pattern, bet the side-flipped 5-hand reverse. Stop on first win, then need 3 fresh columns.</div>
+      <div class="sys-stats">
+        <div class="row"><div class="k">P/L</div><div class="v" id="s2_pl">$0</div></div>
+        <div class="row"><div class="k">W / L / Push</div><div class="v" id="s2_wlp">0/0/0</div></div>
+      </div>
+      <div class="sys-state" id="s2_state">Idle — scanning for trigger</div>
+    </div>
+    <div class="sys-card" data-sys="s3">
+      <h3>System 3 · 10-Column Repeat</h3>
+      <div class="desc">Scan the last 10 big-road columns. If 6+ have length ≥ 2, the shoe is repeating. When a new column starts with 1 outcome, bet that side to repeat. After a win, wait 10 fresh columns.</div>
+      <div class="sys-stats">
+        <div class="row"><div class="k">P/L</div><div class="v" id="s3_pl">$0</div></div>
+        <div class="row"><div class="k">W / L / Push</div><div class="v" id="s3_wlp">0/0/0</div></div>
+      </div>
+      <div class="sys-state" id="s3_state">Idle — need 10 completed columns</div>
+    </div>
+  </div>
+
+  <!-- Ticker -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title"><span class="dot"></span>Hand Log</div>
+    <div class="ticker" id="ticker">
+      <div class="trow head"><div>#</div><div>Res</div><div>Sys 1</div><div>Sys 2</div><div>Sys 3</div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Unit = $10.</b> Each bet is one unit (Banker wins pay 0.95 units after 5% commission, Player wins pay 1 unit, ties push). Toggle systems on or off from the recommendation cards at the top. You can run any combination — the boards reflect the actual hands you've entered, and each system reads them independently.
+  </div>
+
+  <footer>THREE SYSTEMS · BACCARAT TRACKER · FOR SIMULATION & STUDY</footer>
+</div>
+
+<script>
+'use strict';
+
+const UNIT = 10;
+const COMM = 0.05;
+const flip = s => s === 'B' ? 'P' : 'B';
+const fmt = n => (n < 0 ? '−' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+
+// ============================================================
+// SYSTEM 1 · Bead Column
+// ============================================================
+function makeS1(){return {pl:0,bets:0,wins:0,losses:0,pushes:0,pendingBet:null,
+  colVoid:false,bCount:0,pCount:0,mode:'await_first',target:null,lastSettled:null,stateText:'Idle — waiting for first bead column'};}
+
+function s1Process(s, res, handIdx){
+  s.lastSettled = null;
+  const beadPos = (handIdx % 6) + 1;
+
+  // Reset on new bead col
+  if (beadPos === 1){
+    s.colVoid=false; s.bCount=0; s.pCount=0; s.mode='await_first'; s.target=null;
+  }
+
+  // 1) Settle pending bet (set on previous hand)
+  if (s.pendingBet){
+    const b = s.pendingBet; s.pendingBet=null; s.bets++;
+    if (res === 'T'){ s.pushes++; s.lastSettled={result:'push',side:b.side}; }
+    else if (res === b.side){ s.wins++; s.pl += (b.side==='B'?0.95:1); s.lastSettled={result:'win',side:b.side}; }
+    else { s.losses++; s.pl -= 1; s.lastSettled={result:'loss',side:b.side}; }
+  }
+
+  // 2) Process this hand for col state
+  if (s.mode === 'await_first'){
+    if (res === 'T'){ s.colVoid=true; s.mode='closed'; }
+    else { if (res==='B') s.bCount=1; else s.pCount=1; s.target=res; s.mode='bet'; }
+  } else if (s.mode === 'bet'){
+    if (res === 'T'){ /* push, stay */ }
+    else if (res === s.target){ if (res==='B') s.bCount++; else s.pCount++; s.mode='closed'; }
+    else { if (res==='B') s.bCount++; else s.pCount++; s.mode='free'; }
+  } else if (s.mode === 'free'){
+    if (res === 'T'){ /* stay */ }
+    else {
+      if (res==='B') s.bCount++; else s.pCount++;
+      if (s.bCount > s.pCount){ s.target='B'; s.mode='bet'; }
+      else if (s.pCount > s.bCount){ s.target='P'; s.mode='bet'; }
+    }
+  }
+
+  // 3) Plan next bet (only if next bead pos still in [2..6])
+  const nextBeadPos = beadPos + 1;
+  if (nextBeadPos <= 6 && !s.colVoid && s.mode === 'bet'){
+    s.pendingBet = { side: s.target, size: UNIT };
+  } else {
+    s.pendingBet = null;
+  }
+
+  // State text
+  if (s.colVoid) s.stateText = 'Column voided (tie at pos 1) · wait next bead col';
+  else if (s.mode === 'await_first') s.stateText = 'Awaiting first outcome of new bead col';
+  else if (s.mode === 'closed') s.stateText = 'Column closed · wait for new bead col';
+  else if (s.mode === 'bet') s.stateText = `Betting <b>${s.target}</b> · B–P ${s.bCount}–${s.pCount} (pos ${nextBeadPos<=6?nextBeadPos:6})`;
+  else if (s.mode === 'free') s.stateText = `Free hand · B–P ${s.bCount}–${s.pCount}`;
+}
+
+// ============================================================
+// SYSTEM 2 · Big Road Reverse [1,1,3]
+// ============================================================
+function makeS2(){return {pl:0,bets:0,wins:0,losses:0,pushes:0,pendingBet:null,
+  state:'idle',queue:[],lastTriggerEndCol:-1,lastSettled:null,stateText:'Idle — scanning for BP/PB then 3-streak'};}
+
+function s2Process(s, res, mainCols, newColStarted){
+  s.lastSettled = null;
+
+  // 1) Settle
+  if (s.pendingBet){
+    const b = s.pendingBet; s.pendingBet=null; s.bets++;
+    if (res === 'T'){ s.pushes++; s.lastSettled={result:'push',side:b.side}; s.queue.shift(); }
+    else if (res === b.side){
+      s.wins++; s.pl += (b.side==='B'?0.95:1); s.lastSettled={result:'win',side:b.side};
+      s.queue = []; s.state = 'idle';
+    } else {
+      s.losses++; s.pl -= 1; s.lastSettled={result:'loss',side:b.side}; s.queue.shift();
+    }
+  }
+  if (s.state === 'play' && s.queue.length === 0) s.state = 'idle';
+
+  // 2) Check trigger (only when a new column just started and we're idle)
+  if (s.state === 'idle' && newColStarted){
+    const finalized = mainCols.length - 1;
+    if (finalized >= 3){
+      const c1 = mainCols[finalized-3], c2 = mainCols[finalized-2], c3 = mainCols[finalized-1];
+      const startIdx = finalized - 3;
+      if (startIdx > s.lastTriggerEndCol
+          && c1.length === 1 && c2.length === 1 && c3.length === 3){
+        s.queue = [flip(c1.side), flip(c2.side), flip(c3.side), flip(c3.side), flip(c3.side)];
+        s.state = 'play';
+        s.lastTriggerEndCol = finalized - 1;
+      }
+    }
+  }
+
+  // 3) Plan
+  if (s.state === 'play' && s.queue.length > 0){
+    s.pendingBet = { side: s.queue[0], size: UNIT };
+  } else {
+    s.pendingBet = null;
+  }
+
+  // State text
+  if (s.state === 'idle'){
+    const fc = mainCols.length - 1;
+    if (fc < 3) s.stateText = `Idle — need at least 3 finalized columns (${Math.max(0,fc)}/3)`;
+    else {
+      const c1 = mainCols[fc-3], c2 = mainCols[fc-2], c3 = mainCols[fc-1];
+      const last3 = `[${c1?.length||'·'},${c2?.length||'·'},${c3?.length||'·'}]`;
+      const lockNote = s.lastTriggerEndCol >= 0 ? ` · last trigger ended col ${s.lastTriggerEndCol}` : '';
+      s.stateText = `Idle · last 3 col lengths ${last3}${lockNote}`;
+    }
+  } else {
+    s.stateText = `Playing reverse · queue: ${s.queue.join(' ')} · next <b>${s.queue[0]}</b>`;
+  }
+}
+
+// ============================================================
+// SYSTEM 3 · 10-Column Repeat
+// ============================================================
+function makeS3(){return {pl:0,bets:0,wins:0,losses:0,pushes:0,pendingBet:null,
+  lastWinColIdx:-10,lastSettled:null,stateText:'Idle — need 10 completed columns'};}
+
+function s3Process(s, res, mainCols){
+  s.lastSettled = null;
+
+  // 1) Settle
+  if (s.pendingBet){
+    const b = s.pendingBet; s.pendingBet=null; s.bets++;
+    if (res === 'T'){ s.pushes++; s.lastSettled={result:'push',side:b.side}; }
+    else if (res === b.side){
+      s.wins++; s.pl += (b.side==='B'?0.95:1); s.lastSettled={result:'win',side:b.side};
+      s.lastWinColIdx = mainCols.length - 1;
+    } else {
+      s.losses++; s.pl -= 1; s.lastSettled={result:'loss',side:b.side};
+    }
+  }
+
+  // 2) Plan
+  if (mainCols.length === 0){ s.pendingBet = null; s.stateText='Idle — no columns yet'; return; }
+  const curIdx = mainCols.length - 1;
+  const cur = mainCols[curIdx];
+  const cooldownOk = curIdx - s.lastWinColIdx >= 10;
+  const finalized = mainCols.slice(0, curIdx);
+  const last10 = finalized.slice(-10);
+  const has10 = last10.length === 10;
+  let armed = false, count2plus = 0;
+  if (cooldownOk && has10){
+    count2plus = last10.filter(c => c.length >= 2).length;
+    armed = count2plus >= 6;
+  }
+
+  if (armed && cur.length === 1){
+    s.pendingBet = { side: cur.side, size: UNIT };
+  } else {
+    s.pendingBet = null;
+  }
+
+  if (!cooldownOk){
+    const need = 10 - (curIdx - s.lastWinColIdx);
+    s.stateText = `Cooldown · need ${need} more col${need===1?'':'s'} since last win`;
+  } else if (!has10){
+    s.stateText = `Building history · ${finalized.length}/10 completed cols`;
+  } else if (!armed){
+    s.stateText = `Not armed · only ${count2plus}/10 cols have length ≥2 (need 6)`;
+  } else if (cur.length === 1){
+    s.stateText = `Armed · new col started with <b>${cur.side}</b> · bet repeater`;
+  } else {
+    s.stateText = `Armed · current col length ${cur.length} · wait for next new col`;
+  }
+}
+
+// ============================================================
+// State + replay
+// ============================================================
+const state = {
+  history: [],
+  active: { s1:false, s2:false, s3:false },
+  systems: { s1:makeS1(), s2:makeS2(), s3:makeS3() },
+  mainCols: [],
+  events: []  // per-hand record: {res, newColStarted, s1:{settled,bet}, s2:..., s3:...}
+};
+
+function resetSystems(){
+  state.systems.s1 = makeS1();
+  state.systems.s2 = makeS2();
+  state.systems.s3 = makeS3();
+  state.mainCols = [];
+  state.events = [];
+}
+
+function applyResultToMain(res){
+  let newColStarted = false;
+  if (res === 'T'){ /* no change */ }
+  else if (state.mainCols.length === 0){
+    state.mainCols.push({ side: res, length: 1, ties: 0 });
+    newColStarted = true;
+  } else {
+    const last = state.mainCols[state.mainCols.length - 1];
+    if (last.side === res){ last.length++; }
+    else { state.mainCols.push({ side: res, length: 1, ties: 0 }); newColStarted = true; }
+  }
+  // ties: attach to last col if any exists (just for visual count)
+  if (res === 'T' && state.mainCols.length > 0){
+    state.mainCols[state.mainCols.length - 1].ties++;
+  }
+  return newColStarted;
+}
+
+function replay(){
+  resetSystems();
+  for (let i = 0; i < state.history.length; i++){
+    const res = state.history[i];
+    const newColStarted = applyResultToMain(res);
+    s1Process(state.systems.s1, res, i);
+    s2Process(state.systems.s2, res, state.mainCols, newColStarted);
+    s3Process(state.systems.s3, res, state.mainCols);
+    state.events.push({
+      res, newColStarted,
+      s1: { settled: state.systems.s1.lastSettled, pending: state.systems.s1.pendingBet },
+      s2: { settled: state.systems.s2.lastSettled, pending: state.systems.s2.pendingBet },
+      s3: { settled: state.systems.s3.lastSettled, pending: state.systems.s3.pendingBet },
+    });
+  }
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+const $ = id => document.getElementById(id);
+
+function render(){
+  const sys = state.systems;
+  const events = state.events;
+
+  // Recommendations
+  ['s1','s2','s3'].forEach(k => {
+    const el = document.querySelector(`.rec[data-sys="${k}"]`);
+    const pb = state.active[k] ? sys[k].pendingBet : null;
+    el.classList.toggle('off', !state.active[k]);
+    el.classList.remove('bet','B','P');
+    if (pb){
+      el.classList.add('bet', pb.side);
+      $(`rec_${k}`).textContent = 'BET ' + pb.side;
+      $(`why_${k}`).textContent = '$' + pb.size;
+    } else {
+      $(`rec_${k}`).textContent = 'WAIT';
+      $(`why_${k}`).textContent = '—';
+    }
+  });
+
+  // Totals
+  let totalPL = 0, totalStake = 0;
+  const activeKeys = Object.keys(state.active).filter(k => state.active[k]);
+  activeKeys.forEach(k => {
+    totalPL += sys[k].pl * UNIT;
+    if (sys[k].pendingBet) totalStake += sys[k].pendingBet.size;
+  });
+  $('totalPL').textContent = fmt(totalPL);
+  $('totalPL').className = 'v ' + (totalPL > 0 ? 'pos' : totalPL < 0 ? 'neg' : '');
+  const totalBets = activeKeys.reduce((a,k)=>a+sys[k].bets,0);
+  $('totalSub').textContent = totalBets === 0 ? 'no bets yet' : `${totalBets} bet${totalBets===1?'':'s'} settled · ${state.history.length} hand${state.history.length===1?'':'s'}`;
+  $('totalStake').textContent = fmt(totalStake);
+  const armedNow = activeKeys.filter(k => sys[k].pendingBet);
+  $('totalStakeSub').textContent = armedNow.length === 0 ? 'no system armed' : armedNow.map(k=>k.toUpperCase()).join(' · ') + ' armed';
+
+  // System cards
+  ['s1','s2','s3'].forEach(k => {
+    const card = document.querySelector(`.sys-card[data-sys="${k}"]`);
+    card.classList.toggle('off', !state.active[k]);
+    const plDol = sys[k].pl * UNIT;
+    const plEl = $(`${k}_pl`);
+    plEl.textContent = fmt(plDol);
+    plEl.className = 'v ' + (plDol>0?'pos':plDol<0?'neg':'');
+    $(`${k}_wlp`).textContent = `${sys[k].wins}/${sys[k].losses}/${sys[k].pushes}`;
+    $(`${k}_state`).innerHTML = sys[k].stateText;
+  });
+
+  // Bead board
+  const bead = $('bead');
+  bead.innerHTML = '';
+  state.history.forEach((res, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell ' + res;
+    if (i % 6 === 0) cell.classList.add('col-start');
+    cell.textContent = res;
+    bead.appendChild(cell);
+  });
+  bead.scrollLeft = bead.scrollWidth;
+  $('beadHint').textContent = state.history.length + ' hand' + (state.history.length===1?'':'s');
+
+  // Main board (Big Road) with elbow at row 6
+  renderMainBoard();
+  $('mainHint').textContent = state.mainCols.length + ' col' + (state.mainCols.length===1?'':'s');
+
+  // Ticker
+  renderTicker();
+}
+
+function renderMainBoard(){
+  const mb = $('mainboard'); mb.innerHTML='';
+  // Build a 2D grid: rows 0-5, columns expand to right with elbow rule.
+  // We'll place by computed (gridRow, gridCol) per main-col entry.
+  // For simplicity, treat each main "column" linearly: first 6 entries fill rows 0..5 of a visual column,
+  // entries 7+ continue to the right at row 5, then row 5 of next visual col... standard big-road elbow.
+  // For our purposes, no need to perfectly replicate elbow — display entries straight down, capping height at 6
+  // and overflowing to the right at row 5 (a true elbow). We'll do real elbow:
+  const placed = []; // {row, col, side, ties}
+  let visCol = 0;
+  state.mainCols.forEach((c) => {
+    // first entry at (row 0, visCol)
+    let row = 0, col = visCol;
+    placed.push({row, col, side: c.side, ties: c.ties});
+    for (let n = 1; n < c.length; n++){
+      if (row < 5){
+        row++;
+      } else {
+        col++;
+      }
+      placed.push({row, col, side: c.side, ties: 0}); // ties only on last entry visually; we'll add after
+    }
+    // Move ties from the last entry visual: we attached ties count to col, but tie marker should sit on last entry
+    if (c.ties > 0){
+      placed[placed.length - 1].ties = c.ties;
+    }
+    // Next column starts to the right of this column's furthest right col + 1
+    visCol = (placed.length ? placed[placed.length-1].col : visCol) + 1;
+  });
+
+  // Determine grid width
+  const maxCol = placed.reduce((m,p)=>Math.max(m,p.col), -1) + 1;
+  const cols = Math.max(maxCol, 6);
+  // Build cells
+  for (let c = 0; c < cols; c++){
+    for (let r = 0; r < 6; r++){
+      const entry = placed.find(p => p.row === r && p.col === c);
+      const cell = document.createElement('div');
+      if (entry){
+        cell.className = 'mb-cell ' + entry.side;
+        cell.textContent = entry.side;
+        if (entry.ties > 0){
+          const ts = document.createElement('div'); ts.className='ties'; ts.textContent = entry.ties === 1 ? '/' : entry.ties; cell.appendChild(ts);
+        }
+      } else {
+        cell.className = 'mb-cell empty';
+      }
+      cell.style.gridRow = (r+1) + ' / ' + (r+2);
+      cell.style.gridColumn = (c+1) + ' / ' + (c+2);
+      mb.appendChild(cell);
+    }
+  }
+  mb.scrollLeft = mb.scrollWidth;
+}
+
+function renderTicker(){
+  const t = $('ticker');
+  t.innerHTML = '<div class="trow head"><div>#</div><div>Res</div><div>Sys 1</div><div>Sys 2</div><div>Sys 3</div></div>';
+  state.events.forEach((ev, i) => {
+    const row = document.createElement('div'); row.className='trow';
+    const cell = (sysKey) => {
+      if (!state.active[sysKey]) return '<span class="pill idle">off</span>';
+      const e = ev[sysKey];
+      const parts = [];
+      if (e.settled){
+        const r = e.settled.result;
+        parts.push(`<span class="pill ${r}">${r.toUpperCase()} ${e.settled.side}</span>`);
+      }
+      if (e.pending){
+        parts.push(`<span class="pill bet">→ ${e.pending.side}</span>`);
+      }
+      return parts.length ? `<span class="sysact">${parts.join(' ')}</span>` : '<span class="pill idle">—</span>';
+    };
+    row.innerHTML = `<div>${i+1}</div><div class="res ${ev.res}">${ev.res}</div>
+      <div>${cell('s1')}</div><div>${cell('s2')}</div><div>${cell('s3')}</div>`;
+    t.appendChild(row);
+  });
+  t.scrollTop = t.scrollHeight;
+}
+
+// ============================================================
+// Events
+// ============================================================
+document.querySelectorAll('.bigbtn').forEach(b => b.onclick = () => {
+  state.history.push(b.dataset.r);
+  replay(); render();
+});
+$('undoBtn').onclick = () => { state.history.pop(); replay(); render(); };
+$('resetBtn').onclick = () => { if (confirm('Reset the entire shoe?')) { state.history = []; replay(); render(); } };
+document.querySelectorAll('.toggle').forEach(t => t.onclick = (e) => {
+  e.stopPropagation();
+  const k = t.dataset.toggle;
+  state.active[k] = !state.active[k];
+  render();
+});
+// Tap whole rec card also toggles
+document.querySelectorAll('.rec').forEach(el => el.onclick = (e) => {
+  const k = el.dataset.sys;
+  state.active[k] = !state.active[k];
+  render();
+});
+
+// Start with all systems on
+state.active.s1 = state.active.s2 = state.active.s3 = true;
+replay(); render();
+</script>
+</body>
+</html>
