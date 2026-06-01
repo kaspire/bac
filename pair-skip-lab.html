@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skip Lab — Pair Position &amp; Skip Collector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt-0:#0a1410;--felt-1:#0e1c16;--felt-2:#12241c;
+    --line:#1f3a2e;--line-soft:#19302541;
+    --ink:#dfeee6;--ink-dim:#8fa89a;--ink-faint:#5f786b;
+    --gold:#c9a227;--gold-soft:#e3c766;--jade:#3fbf86;--jade-dim:#2a7a57;
+    --red:#d96a5a;--amber:#e0a64a;--blue:#6fb0d6;
+    --panel:#0f1d17;--shadow:0 18px 50px -20px rgba(0,0,0,.8);
+    --mono:'JetBrains Mono',ui-monospace,monospace;--disp:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--mono);color:var(--ink);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(120% 80% at 18% -10%,#16302330 0%,transparent 55%),radial-gradient(120% 90% at 100% 0%,#0c1f1530 0%,transparent 50%),var(--felt-0);}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:32px 20px 90px}
+
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px}
+  .brand h1{font-family:var(--disp);font-weight:600;font-size:clamp(28px,5vw,42px);margin:0;letter-spacing:-.01em;line-height:.98}
+  .brand h1 .em{font-style:italic;color:var(--gold-soft)}
+  .brand p{margin:7px 0 0;color:var(--ink-dim);font-size:12px;max-width:52ch}
+  .savebar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .pill{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+  #saveState{color:var(--jade)}
+
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:22px;margin-top:24px}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+  .panel{background:linear-gradient(180deg,var(--panel),var(--felt-1));border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow);margin-bottom:20px}
+  .panel h2{font-family:var(--disp);font-weight:500;font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
+  .panel .sub{color:var(--ink-dim);font-size:11.5px;margin:0 0 16px}
+  .section-label{font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-faint);margin:18px 0 10px}
+  .section-label:first-child{margin-top:0}
+
+  button{font-family:var(--mono);cursor:pointer}
+  .btn{border:1px solid var(--line);background:var(--felt-2);color:var(--ink);border-radius:9px;padding:9px 14px;font-size:12px;letter-spacing:.02em;transition:.15s}
+  .btn:hover{border-color:var(--jade-dim);color:#fff}
+  .btn.gold{background:linear-gradient(180deg,#caa42c,#a8861a);color:#1b1606;border-color:#d8b943;font-weight:600}
+  .btn.gold:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:5px 9px;font-size:11px}
+  .btn.danger{color:var(--red);border-color:#5a2a23}
+  .btn.danger:hover{background:#2a1512;color:#ffb0a3}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .field{flex:1;min-width:0}
+  .field label{display:block;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+  input.txt{font-family:var(--mono);background:var(--felt-0);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:10px 11px;font-size:15px;width:100%;text-align:center;font-variant-numeric:tabular-nums}
+  input.txt:focus{outline:none;border-color:var(--jade)}
+  input.txt.derived{color:var(--ink-dim);border-style:dashed}
+  .mini{font-size:10.5px;color:var(--ink-faint);margin-top:7px}
+
+  .pairlist{margin-top:14px;display:flex;flex-direction:column;gap:5px;max-height:230px;overflow:auto}
+  .prow{display:grid;grid-template-columns:34px 1fr 1fr 1fr 28px;gap:8px;align-items:center;font-size:12px;background:var(--felt-0);border:1px solid var(--line-soft);border-radius:8px;padding:7px 10px;font-variant-numeric:tabular-nums}
+  .prow .idx{color:var(--ink-faint);font-size:10px}
+  .prow .lbl{color:var(--ink-faint);font-size:9px;display:block;letter-spacing:.08em}
+  .prow b{font-weight:600}
+  .prow .x{color:var(--ink-faint);text-align:center;cursor:pointer;border:none;background:none;font-size:13px}
+  .prow .x:hover{color:var(--red)}
+  .prow.skip{grid-template-columns:1fr;color:var(--jade);font-size:10.5px;background:none;border:none;padding:1px 10px;letter-spacing:.04em}
+
+  /* bead grid */
+  .bead{display:grid;gap:3px;margin-top:14px;grid-auto-flow:column}
+  .bcell{width:100%;aspect-ratio:1;border:1px solid var(--line-soft);border-radius:5px;background:var(--felt-0);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-faint);position:relative}
+  .bcell.hit{background:var(--jade-dim);border-color:var(--jade);color:#eafff4;box-shadow:0 0 9px -3px var(--jade)}
+  .bcell.first{outline:2px solid var(--gold)}
+
+  table.data{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  table.data th,table.data td{text-align:right;padding:8px 9px;border-bottom:1px solid var(--line-soft)}
+  table.data th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;border-bottom:1px solid var(--line)}
+  table.data td:first-child,table.data th:first-child{text-align:left}
+  table.data tr:hover td{background:#13241c}
+  .num{font-variant-numeric:tabular-nums}
+  .barcell{position:relative}
+  .bar{position:absolute;left:0;top:3px;bottom:3px;border-radius:0 5px 5px 0;z-index:0;background:linear-gradient(90deg,#1f4a36,#2a7a5733)}
+  .bar.hi{background:linear-gradient(90deg,#3d6a1f,#7a9a2a33)}
+  .bar.lo{background:linear-gradient(90deg,#4a2a1f,#7a4a2a33)}
+  .barcell span{position:relative;z-index:1}
+  .verdict{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap;display:inline-block}
+  .v-noise{background:#152a20;color:var(--ink-dim)}
+  .v-few{background:#1a2330;color:var(--blue)}
+  .v-hi{background:#27401a;color:#bfe06a}
+  .v-lo{background:#3a2417;color:var(--amber)}
+  .best{color:var(--gold-soft);font-weight:700}
+
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:4px 0 6px}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:var(--felt-0)}
+  .stat .k{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+  .stat .v{font-family:var(--disp);font-size:26px;font-weight:600;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat .d{font-size:10.5px;margin-top:2px;color:var(--ink-dim)}
+
+  .callout{border:1px solid var(--jade-dim);background:#0c1f16;border-radius:11px;padding:14px 16px;margin:6px 0 0;font-size:12.5px}
+  .callout b{color:var(--gold-soft)}
+
+  .shoe-list{display:flex;flex-direction:column;gap:7px}
+  .shoe-item{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:var(--felt-0);font-size:12px}
+  .shoe-item.cur{border-color:var(--gold);box-shadow:0 0 16px -8px var(--gold)}
+  .shoe-meta{color:var(--ink-dim);font-size:10.5px}
+
+  details.note{border:1px solid var(--line);border-radius:11px;background:var(--felt-1);padding:0 16px;margin-top:18px}
+  details.note summary{cursor:pointer;padding:15px 0;font-family:var(--disp);font-size:15px;color:var(--gold-soft);list-style:none}
+  details.note summary::-webkit-details-marker{display:none}
+  details.note summary::before{content:"▸ ";color:var(--ink-faint)}
+  details.note[open] summary::before{content:"▾ "}
+  details.note .body{padding-bottom:16px;font-size:12px;color:var(--ink-dim);line-height:1.6}
+  details.note .body b{color:var(--ink)} details.note .body code{background:var(--felt-0);padding:1px 5px;border-radius:4px;color:var(--gold-soft);font-size:11px}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0c1b14;border:1px solid var(--jade-dim);color:var(--ink);padding:10px 18px;border-radius:10px;font-size:12px;z-index:50;opacity:0;transition:.3s;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+  .empty{color:var(--ink-faint);font-size:12px;font-style:italic;padding:10px 0}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab{font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:none;border:none;color:var(--ink-faint);padding:9px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)} .tab.active{color:var(--gold-soft);border-bottom-color:var(--gold)}
+  .agview{display:none} .agview.active{display:block;animation:fade .3s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Skip&nbsp;<span class="em">Lab</span></h1>
+      <p>Log pairs by Hand / Col / Row, get skip &amp; position stats per shoe, and pinpoint the window where pairs hit fastest across many shoes. Export each shoe to CSV and build your dataset over time.</p>
+    </div>
+    <div class="savebar">
+      <span class="pill" id="saveState">memory only</span>
+      <button class="btn ghost sm" id="btnJSON">Backup JSON</button>
+      <button class="btn ghost sm" id="btnImport">Import</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none">
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT: entry -->
+    <div>
+      <div class="panel">
+        <h2>Active shoe</h2>
+        <p class="sub" id="shoeSub">—</p>
+
+        <div class="row" style="margin-bottom:12px">
+          <div class="field"><label>Shoe name</label><input class="txt" id="shoeName" style="text-align:left;font-size:13px"></div>
+          <div class="field" style="max-width:120px"><label>Ended at hand</label><input class="txt" id="shoeEnd" inputmode="numeric" placeholder="e.g. 64"></div>
+        </div>
+        <div class="row" style="margin-bottom:6px">
+          <div class="field" style="max-width:80px"><label>Rows / col</label><input class="txt" id="rpc" value="6" inputmode="numeric"></div>
+          <div class="mini" style="flex:1">Col &amp; Row auto-fill from Hand using this wrap. Edit them if your board differs.</div>
+        </div>
+
+        <p class="section-label">Add a pair</p>
+        <div class="row">
+          <div class="field"><label>Hand</label><input class="txt" id="inHand" inputmode="numeric" placeholder="#"></div>
+          <div class="field"><label>Col</label><input class="txt derived" id="inCol" inputmode="numeric"></div>
+          <div class="field"><label>Row</label><input class="txt derived" id="inRow" inputmode="numeric"></div>
+          <button class="btn gold" id="btnAdd" style="height:42px">Add ↵</button>
+        </div>
+        <div class="mini">Type the Hand and press <b>Enter</b> — Col/Row fill automatically. <b>Backspace</b> in an empty Hand box removes the last pair.</div>
+
+        <div class="pairlist" id="pairList"></div>
+
+        <p class="section-label">Position map</p>
+        <div class="bead" id="bead"></div>
+        <div class="mini" style="margin-top:8px"><span style="color:var(--jade)">■</span> pair · <span style="color:var(--gold-soft)">▢</span> first hit · columns left→right, hands top→bottom</div>
+
+        <div class="row" style="margin-top:18px">
+          <button class="btn" id="btnCSV">Export this shoe · CSV</button>
+          <button class="btn ghost" id="btnNew">New shoe</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>This shoe</h2>
+        <div class="stat-row" id="curStats"></div>
+        <p class="section-label">Skips between pairs</p>
+        <table class="data" id="skipTbl"><tbody></tbody></table>
+      </div>
+    </div>
+
+    <!-- RIGHT: aggregate -->
+    <div>
+      <div class="panel">
+        <h2>Across all shoes</h2>
+        <p class="sub"><b id="agShoes">0</b> shoes · <b id="agPairs">0</b> pairs · <b id="agHands">0</b> hand-slots. Set <b>Ended at hand</b> on each shoe so the density math knows how many betting slots existed.</p>
+
+        <div class="tabs">
+          <button class="tab active" data-ag="end">By distance from end</button>
+          <button class="tab" data-ag="start">By hand number</button>
+          <button class="tab" data-ag="wait">Fastest entry</button>
+          <button class="tab" data-ag="window">Window odds</button>
+          <button class="tab" data-ag="gaps">Skip spread</button>
+        </div>
+
+        <div class="agview active" id="ag-end">
+          <p class="sub">Pair density in each 10-hand band counted backward from each shoe's end. Your "they cluster at the end" hypothesis lives here — this is the physically meaningful axis.</p>
+          <table class="data" id="endTbl"><thead><tr><th>Band (hands from end)</th><th>slots</th><th>pairs</th><th>density</th><th>z</th><th>read</th></tr></thead><tbody></tbody></table>
+          <div class="callout" id="endBest"></div>
+        </div>
+
+        <div class="agview" id="ag-start">
+          <p class="sub">Pair density in each 10-hand band counted forward from hand 1. Column number is just this binned, so this subsumes "what column."</p>
+          <table class="data" id="startTbl"><thead><tr><th>Band (hand #)</th><th>slots</th><th>pairs</th><th>density</th><th>z</th><th>read</th></tr></thead><tbody></tbody></table>
+          <div class="callout" id="startBest"></div>
+        </div>
+
+        <div class="agview" id="ag-wait">
+          <p class="sub">If you started watching at hand S, how fast did a pair arrive? Lower mean wait + higher hit-rate = better entry. (Among shoes that reached S.)</p>
+          <table class="data" id="waitTbl"><thead><tr><th>Start hand S</th><th>shoes</th><th>hit within 10</th><th>mean wait*</th></tr></thead><tbody></tbody></table>
+          <div class="mini">*mean hands from S to the first pair, among shoes that produced one at or after S.</div>
+          <div class="callout" id="waitBest"></div>
+        </div>
+
+        <div class="agview" id="ag-window">
+          <p class="sub">The live question: you're at <b>hand A</b> having seen some pairs already, and you'll stop by <b>hand B</b>. Each row is a "count so far" (pairs in hands 1…A−1) — find your row, read across for the odds of hitting in the window. The grey <b>Chance</b> row is what pure randomness gives; if a count row doesn't beat it, the count tells you nothing.</p>
+          <div class="row" style="margin-bottom:14px;align-items:flex-end">
+            <div class="field" style="max-width:110px"><label>Window start A</label><input class="txt" id="winA" value="40" inputmode="numeric"></div>
+            <div class="field" style="max-width:110px"><label>Window end B</label><input class="txt" id="winB" value="60" inputmode="numeric"></div>
+            <div class="mini" style="flex:1">Window length <b id="winLen">21</b> hands. Only shoes whose end ≥ B count (window fully dealt): <b id="winElig">0</b>.</div>
+          </div>
+          <table class="data" id="winTbl"><thead><tr><th>Count so far (by h<span id="winAh">40</span>)</th><th>shoes</th><th>mean hits</th><th>P(≥1)</th><th>P(≥2)</th><th>P(≥3)</th><th>read</th></tr></thead><tbody></tbody></table>
+          <div class="callout" id="winBest"></div>
+        </div>
+
+        <div class="agview" id="ag-gaps">
+          <p class="sub">Distribution of skips (hands between consecutive pairs) pooled over every shoe.</p>
+          <table class="data" id="gapsTbl"><thead><tr><th>Skip (hands)</th><th>count</th><th>share</th></tr></thead><tbody></tbody></table>
+          <div class="stat-row" id="gapStats" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Shoes</h2>
+        <div class="row" style="margin-bottom:14px;align-items:flex-end">
+          <div class="field" style="max-width:150px"><label>Baseline density %</label><input class="txt" id="baseInp" value="14.29"></div>
+          <button class="btn sm" id="btnBase">Apply</button>
+          <button class="btn ghost sm" id="btnAllCSV">Export ALL shoes · CSV</button>
+        </div>
+        <div class="shoe-list" id="shoeList"></div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn danger sm" id="btnWipe">Erase everything</button>
+        </div>
+      </div>
+
+      <details class="note">
+        <summary>Reading the numbers — honest version</summary>
+        <div class="body">
+          <p><b>Two real axes.</b> Hand-number and hands-from-end are independent physical positions. <b>Row</b> is <code>((hand−1) mod rows)+1</code> — a display wrap with a fake period, no physics, ignore any pattern in it. <b>Column</b> is just the hand binned, so the "by hand number" table already covers it.</p>
+          <p><b>Density vs baseline.</b> A fresh-shoe pair lands ~<code>14.3%</code> of hands (either side). Each band shows observed density and a <b>z</b> versus that. |z|&lt;2 is noise; you need a band that stays high across <i>many</i> shoes before trusting it.</p>
+          <p><b>The one real effect.</b> A depleted shoe runs slightly uneven, which nudges pair odds up near the end — so a faint rise in the last bands is physically plausible. But it's small, and "4 hits in 14 hands at the end" of one shoe is also exactly what ordinary clustering produces. Only the pooled density across dozens of shoes can tell the difference.</p>
+          <p><b>Power.</b> ~30+ shoes before the end-bands mean much; ~100 before you'd trust a 1–2 point density edge. The cut card stops shoes ~14 cards from the true end, so the very deepest depletion never gets dealt — keep that in mind for the last band.</p>
+          <p><b>Reminder it can't beat the edge.</b> Even a real density bump in one band doesn't overcome the 10–14% house edge on the bet. This finds your <i>fastest-hitting window</i> for extract-and-leave timing — not an edge over the game.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const KEY="skiplab.v1";
+let state={shoes:[],curId:null,base:14.29};
+let storageOK=false;
+
+/* ---- persistence ---- */
+async function save(){
+  try{ if(window.storage&&window.storage.set){ await window.storage.set(KEY,JSON.stringify(state),false); storageOK=true; setSave("saved"); return; } }catch(e){}
+  setSave("memory only");
+}
+async function load(){
+  try{ if(window.storage&&window.storage.get){ const r=await window.storage.get(KEY,false); if(r&&r.value){ state=JSON.parse(r.value); storageOK=true; } } }catch(e){}
+  setSave(window.storage?(storageOK?"saved":"memory only"):"memory only");
+  if(!state.shoes) state.shoes=[]; if(state.base==null) state.base=14.29;
+  ensureShoe();
+}
+function setSave(t){ const e=document.getElementById('saveState'); if(e)e.textContent=t; }
+
+/* ---- model ---- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function cur(){ return state.shoes.find(s=>s.id===state.curId)||null; }
+function ensureShoe(){ if(!cur()){ if(state.shoes.length) state.curId=state.shoes[state.shoes.length-1].id; else newShoe(false); } }
+function newShoe(persist=true){
+  const n=state.shoes.length+1;
+  const s={id:uid(),name:"Shoe "+n,end:null,rpc:6,pairs:[],created:Date.now()};
+  state.shoes.push(s); state.curId=s.id; if(persist){save();} return s;
+}
+function rpcOf(s){ return (s&&s.rpc)||6; }
+function colRow(hand,rpc){ rpc=rpc||6; return { col:Math.ceil(hand/rpc), row:((hand-1)%rpc)+1 }; }
+
+/* ---- entry ---- */
+function syncHeader(){
+  const s=cur(); if(!s) return;
+  document.getElementById('shoeName').value=s.name;
+  document.getElementById('shoeEnd').value=s.end??'';
+  document.getElementById('rpc').value=rpcOf(s);
+  document.getElementById('baseInp').value=state.base;
+  const pairs=s.pairs.length, end=s.end?(' · ends at '+s.end):'';
+  document.getElementById('shoeSub').textContent=s.name+' — '+pairs+' pair'+(pairs===1?'':'s')+' logged'+end;
+}
+function deriveColRow(){
+  const h=parseInt(document.getElementById('inHand').value,10);
+  if(!h||h<1){ document.getElementById('inCol').value=''; document.getElementById('inRow').value=''; return; }
+  const cr=colRow(h,parseInt(document.getElementById('rpc').value,10)||6);
+  document.getElementById('inCol').value=cr.col; document.getElementById('inRow').value=cr.row;
+}
+function addPair(){
+  const s=cur();
+  const h=parseInt(document.getElementById('inHand').value,10);
+  if(!h||h<1){ toast('Enter a hand number'); return; }
+  if(s.pairs.some(p=>p.hand===h)){ toast('Hand '+h+' already logged'); return; }
+  const col=parseInt(document.getElementById('inCol').value,10)||colRow(h,rpcOf(s)).col;
+  const row=parseInt(document.getElementById('inRow').value,10)||colRow(h,rpcOf(s)).row;
+  s.pairs.push({hand:h,col,row}); s.pairs.sort((a,b)=>a.hand-b.hand);
+  document.getElementById('inHand').value=''; document.getElementById('inCol').value=''; document.getElementById('inRow').value='';
+  document.getElementById('inHand').focus();
+  save(); render();
+}
+function delPair(h){ const s=cur(); s.pairs=s.pairs.filter(p=>p.hand!==h); save(); render(); }
+
+/* ---- render current ---- */
+function renderPairs(){
+  const s=cur(), el=document.getElementById('pairList');
+  if(!s.pairs.length){ el.innerHTML='<div class="empty">No pairs yet — add the first.</div>'; return; }
+  let html='';
+  s.pairs.forEach((p,i)=>{
+    if(i>0){ html+=`<div class="prow skip">↕ skip ${p.hand-s.pairs[i-1].hand} hands</div>`; }
+    html+=`<div class="prow"><span class="idx">${i+1}</span>`+
+      `<span><span class="lbl">HAND</span><b>${p.hand}</b></span>`+
+      `<span><span class="lbl">COL</span><b>${p.col}</b></span>`+
+      `<span><span class="lbl">ROW</span><b>${p.row}</b></span>`+
+      `<button class="x" data-h="${p.hand}">✕</button></div>`;
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.x').forEach(b=>b.onclick=()=>delPair(+b.dataset.h));
+}
+function renderBead(){
+  const s=cur(), el=document.getElementById('bead'); const rpc=rpcOf(s);
+  const maxHand=Math.max(s.end||0, ...s.pairs.map(p=>p.hand), rpc);
+  const cols=Math.max(1,Math.ceil(maxHand/rpc));
+  el.style.gridTemplateRows='repeat('+rpc+',1fr)';
+  el.style.gridTemplateColumns='repeat('+cols+',1fr)';
+  const hitSet=new Set(s.pairs.map(p=>p.hand));
+  const first=s.pairs.length?s.pairs[0].hand:null;
+  let html='';
+  for(let c=1;c<=cols;c++){ for(let r=1;r<=rpc;r++){
+    const hand=(c-1)*rpc+r;
+    if(s.end&&hand>s.end){ html+=`<div class="bcell" style="opacity:.15"></div>`; continue; }
+    const cls='bcell'+(hitSet.has(hand)?' hit':'')+(hand===first?' first':'');
+    html+=`<div class="${cls}">${hand}</div>`;
+  }}
+  el.innerHTML=html;
+}
+function renderCurStats(){
+  const s=cur(), st=document.getElementById('curStats');
+  const ps=s.pairs, n=ps.length;
+  const first=n?ps[0].hand:null, last=n?ps[n-1].hand:null;
+  const fromEnd=(s.end&&last)?(s.end-last):null;
+  const gaps=[]; for(let i=1;i<n;i++) gaps.push(ps[i].hand-ps[i-1].hand);
+  const meanGap=gaps.length?(gaps.reduce((a,b)=>a+b,0)/gaps.length):null;
+  const density=(s.end&&s.end>0)?(100*n/s.end):null;
+  st.innerHTML=[
+    ['Pairs',String(n),s.end?(density.toFixed(1)+'% of hands'):'set shoe end'],
+    ['First hit', first?('h'+first):'—', first?('after '+(first-1)+' dry'):''],
+    ['Last hit', last?('h'+last):'—', fromEnd!=null?(fromEnd+' from end'):''],
+    ['Mean skip', meanGap!=null?meanGap.toFixed(1):'—', gaps.length?('max '+Math.max(...gaps)):'']
+  ].map(([k,v,d])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+}
+function renderSkipTbl(){
+  const s=cur(), tb=document.querySelector('#skipTbl tbody'); const ps=s.pairs;
+  if(ps.length<2){ tb.innerHTML='<tr><td class="empty">Need 2+ pairs.</td></tr>'; return; }
+  let html='';
+  for(let i=1;i<ps.length;i++){ const g=ps[i].hand-ps[i-1].hand;
+    html+=`<tr><td>h${ps[i-1].hand} → h${ps[i].hand}</td><td class="num barcell"><div class="bar" style="width:${Math.min(g,30)/30*100}%"></div><span>${g} hands</span></td></tr>`; }
+  tb.innerHTML='<tr><th>Transition</th><th>Skip</th></tr>'+html;
+}
+
+/* ---- aggregate stats ---- */
+function zCalc(k,n,p0){ if(n<=0)return 0; const p=p0/100,se=Math.sqrt(p*(1-p)/n); return se>0?((k/n)-p)/se:0; }
+function readBand(z,n){ if(n<60)return{cls:'v-few',t:'thin ('+n+')'}; const a=Math.abs(z); if(a<2)return{cls:'v-noise',t:'noise'}; return z>0?{cls:'v-hi',t:'hot'}:{cls:'v-lo',t:'cold'}; }
+function withEnd(){ return state.shoes.filter(s=>s.end&&s.end>0); }
+
+function bandStats(mode){ // 'start' or 'end', 10-wide
+  const bands=[[0,9],[10,19],[20,29],[30,39],[40,49],[50,200]];
+  return bands.map(([a,b])=>{
+    let pairs=0,slots=0;
+    withEnd().forEach(s=>{
+      const rpc=rpcOf(s);
+      if(mode==='start'){
+        slots+=Math.max(0,Math.min(b,s.end-1)-a+1); // hand index 0-based:hand-1
+        s.pairs.forEach(p=>{ const m=p.hand-1; if(m>=a&&m<=b)pairs++; });
+      }else{
+        slots+=Math.max(0,Math.min(b,s.end-1)-a+1); // fromEnd 0..end-1
+        s.pairs.forEach(p=>{ const m=s.end-p.hand; if(m>=a&&m<=b)pairs++; });
+      }
+    });
+    return {a,b,pairs,slots,density:slots?100*pairs/slots:0,z:zCalc(pairs,slots,state.base)};
+  });
+}
+function renderBandTbl(mode){
+  const rows=bandStats(mode);
+  const maxD=Math.max(state.base,...rows.map(r=>r.density));
+  const tb=document.querySelector('#'+(mode==='end'?'endTbl':'startTbl')+' tbody');
+  let best=null;
+  tb.innerHTML=rows.map(r=>{
+    const lab = mode==='end'
+      ? (r.b>100?(r.a+'+ from end'):(r.a===0?'last 1–10':((r.a+1)+'–'+(r.b+1)+' from end')))
+      : (r.b>100?((r.a+1)+'+'):((r.a+1)+'–'+(r.b+1)));
+    const v=readBand(r.z,r.slots);
+    if(r.slots>=60 && (!best||r.density>best.density)) best=Object.assign({lab},r);
+    const barcls=r.density>state.base?'hi':(r.density<state.base?'lo':'');
+    return `<tr><td>${lab}</td><td class="num">${r.slots}</td><td class="num">${r.pairs}</td>`+
+      `<td class="num barcell"><div class="bar ${barcls}" style="width:${maxD?r.density/maxD*100:0}%"></div><span>${r.slots?r.density.toFixed(1)+'%':'—'}</span></td>`+
+      `<td class="num">${r.slots>=60?r.z.toFixed(1):'—'}</td><td><span class="verdict ${v.cls}">${v.t}</span></td></tr>`;
+  }).join('');
+  const out=document.getElementById(mode==='end'?'endBest':'startBest');
+  if(!best){ out.textContent='Log a few shoes with their end hand set, and the densest window will surface here.'; }
+  else { out.innerHTML=`Densest window so far: <b>${best.lab}</b> at <b>${best.density.toFixed(1)}%</b> vs ${state.base}% baseline (z ${best.z.toFixed(1)}). ${Math.abs(best.z)<2?'Still inside noise — keep collecting.':'Watch whether it holds as shoes pile up.'}`; }
+}
+function renderWait(){
+  const tb=document.querySelector('#waitTbl tbody'); const starts=[1,6,11,16,21,26,31,36,41,46,51];
+  const rows=starts.map(S=>{
+    let reach=0,hits=0,within=0,sumWait=0;
+    withEnd().forEach(s=>{ if(s.end<S)return; reach++;
+      const fp=s.pairs.find(p=>p.hand>=S);
+      if(fp){ hits++; const w=fp.hand-S; sumWait+=w; if(w<=9)within++; }
+    });
+    return {S,reach,hits,within,mean:hits?sumWait/hits:null,pct:reach?100*within/reach:0};
+  }).filter(r=>r.reach>0);
+  if(!rows.length){ tb.innerHTML='<tr><td class="empty">Need shoes with end set.</td></tr>'; document.getElementById('waitBest').textContent=''; return; }
+  const maxPct=Math.max(...rows.map(r=>r.pct))||1;
+  tb.innerHTML=rows.map(r=>`<tr><td>h${r.S}</td><td class="num">${r.reach}</td>`+
+    `<td class="num barcell"><div class="bar hi" style="width:${r.pct/maxPct*100}%"></div><span>${r.pct.toFixed(0)}%</span></td>`+
+    `<td class="num">${r.mean!=null?r.mean.toFixed(1):'—'}</td></tr>`).join('');
+  const good=rows.filter(r=>r.reach>=10).sort((a,b)=>b.pct-a.pct)[0];
+  document.getElementById('waitBest').innerHTML= good
+    ? `Fastest practical entry so far: starting around <b>hand ${good.S}</b> — a pair landed within 10 hands in <b>${good.pct.toFixed(0)}%</b> of shoes (mean wait ${good.mean.toFixed(1)}).`
+    : 'Once a start hand has 10+ shoes behind it, the best entry surfaces here.';
+}
+function renderGaps(){
+  const gaps=[]; state.shoes.forEach(s=>{ const ps=s.pairs; for(let i=1;i<ps.length;i++) gaps.push(ps[i].hand-ps[i-1].hand); });
+  const tb=document.querySelector('#gapsTbl tbody');
+  if(!gaps.length){ tb.innerHTML='<tr><td class="empty">Need 2+ pairs in a shoe.</td></tr>'; document.getElementById('gapStats').innerHTML=''; return; }
+  const buckets={'1':0,'2–3':0,'4–6':0,'7–10':0,'11–15':0,'16–25':0,'26+':0};
+  gaps.forEach(g=>{ buckets[g<=1?'1':g<=3?'2–3':g<=6?'4–6':g<=10?'7–10':g<=15?'11–15':g<=25?'16–25':'26+']++; });
+  const tot=gaps.length, mx=Math.max(...Object.values(buckets));
+  tb.innerHTML=Object.entries(buckets).map(([lab,c])=>{ const sh=100*c/tot;
+    return `<tr><td>${lab}</td><td class="num">${c}</td><td class="num barcell"><div class="bar" style="width:${mx?c/mx*100:0}%"></div><span>${sh.toFixed(0)}%</span></td></tr>`; }).join('');
+  const mean=gaps.reduce((a,b)=>a+b,0)/gaps.length; const sorted=[...gaps].sort((a,b)=>a-b); const med=sorted[Math.floor(sorted.length/2)];
+  document.getElementById('gapStats').innerHTML=[
+    ['Mean skip',mean.toFixed(1),'hands'],['Median',String(med),'hands'],['Max',String(Math.max(...gaps)),'hands'],['n skips',String(gaps.length),'']
+  ].map(([k,v,d])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+}
+/* ---- window odds ---- */
+function nCk(n,k){ if(k<0||k>n)return 0; k=Math.min(k,n-k); let r=1; for(let i=0;i<k;i++) r=r*(n-i)/(i+1); return r; }
+function binomGE(k,n,p){ let s=0; for(let i=k;i<=n;i++) s+=nCk(n,i)*Math.pow(p,i)*Math.pow(1-p,n-i); return Math.max(0,Math.min(1,s)); }
+function countBefore(s,A){ return s.pairs.filter(p=>p.hand<A).length; }
+function hitsIn(s,A,B){ return s.pairs.filter(p=>p.hand>=A&&p.hand<=B).length; }
+function renderWindow(){
+  let A=parseInt(document.getElementById('winA').value,10)||40;
+  let B=parseInt(document.getElementById('winB').value,10)||60;
+  if(B<A){ const t=A;A=B;B=t; }
+  const L=B-A+1, p=state.base/100;
+  document.getElementById('winLen').textContent=L;
+  document.getElementById('winAh').textContent=A;
+  const elig=state.shoes.filter(s=>s.end&&s.end>=B);
+  document.getElementById('winElig').textContent=elig.length;
+  const tb=document.querySelector('#winTbl tbody');
+
+  // chance reference
+  const cMean=L*p, cP1=binomGE(1,L,p), cP2=binomGE(2,L,p), cP3=binomGE(3,L,p);
+  const chanceRow=`<tr style="background:#10211a"><td><b style="color:var(--ink-dim)">Chance (random)</b></td><td class="num">—</td><td class="num">${cMean.toFixed(2)}</td><td class="num">${(cP1*100).toFixed(0)}%</td><td class="num">${(cP2*100).toFixed(0)}%</td><td class="num">${(cP3*100).toFixed(0)}%</td><td><span class="verdict v-noise">baseline</span></td></tr>`;
+
+  if(!elig.length){ tb.innerHTML=chanceRow+'<tr><td colspan="7" class="empty">No shoes reach hand '+B+' yet — log shoes and set their end ≥ '+B+'.</td></tr>'; document.getElementById('winBest').textContent='Need shoes whose end ≥ B before conditional odds appear.'; return; }
+
+  // buckets by count-so-far 0,1,2,3,4,5+
+  const groups=[0,1,2,3,4,5];
+  let rows='', best=null;
+  // "All" row
+  const all=elig.map(s=>hitsIn(s,A,B));
+  rows+=rowFor('All counts', all, p, L, true);
+  groups.forEach(g=>{
+    const set=elig.filter(s=>{ const c=countBefore(s,A); return g<5? c===g : c>=5; });
+    if(!set.length) return;
+    const hits=set.map(s=>hitsIn(s,A,B));
+    const lab=g<5?String(g):'5+';
+    rows+=rowFor(lab,hits,p,L,false);
+    const p1=hits.filter(h=>h>=1).length/hits.length;
+    if(set.length>=20 && (!best||p1>best.p1)) best={lab,p1,n:set.length};
+  });
+  tb.innerHTML=chanceRow+rows;
+
+  const out=document.getElementById('winBest');
+  if(best){ const dz=(best.p1-cP1); out.innerHTML=`Among shoes with count <b>${best.lab}</b> by hand ${A} (n=${best.n}), a hit in ${A}–${B} happened <b>${(best.p1*100).toFixed(0)}%</b> of the time vs ${(cP1*100).toFixed(0)}% by chance. ${Math.abs(dz)<0.08?'That gap is within noise — count-so-far is not telling you much yet.':'Keep an eye on whether this gap survives more shoes.'}`; }
+  else { out.innerHTML='Conditional rows need ~20+ shoes each to mean anything. Splitting by count-so-far divides your data thin, so this is the slowest view to fill — expect to need a few hundred shoes before the rows separate from the Chance line (if they ever do).'; }
+}
+function rowFor(lab,hits,p,L,isAll){
+  const n=hits.length;
+  const mean=hits.reduce((a,b)=>a+b,0)/n;
+  const p1=hits.filter(h=>h>=1).length/n, p2=hits.filter(h=>h>=2).length/n, p3=hits.filter(h=>h>=3).length/n;
+  const cP1=binomGE(1,L,p);
+  let v;
+  if(n<20) v={cls:'v-few',t:'thin ('+n+')'};
+  else { const se=Math.sqrt(cP1*(1-cP1)/n), z=se>0?(p1-cP1)/se:0; v=Math.abs(z)<2?{cls:'v-noise',t:'noise'}:(z>0?{cls:'v-hi',t:'above'}:{cls:'v-lo',t:'below'}); }
+  const style=isAll?' style="border-bottom:1px solid var(--line)"':'';
+  const lc=isAll?'<b>'+lab+'</b>':lab;
+  return `<tr${style}><td>${lc}</td><td class="num">${n}</td><td class="num">${mean.toFixed(2)}</td><td class="num">${(p1*100).toFixed(0)}%</td><td class="num">${(p2*100).toFixed(0)}%</td><td class="num">${(p3*100).toFixed(0)}%</td><td><span class="verdict ${v.cls}">${v.t}</span></td></tr>`;
+}
+function renderAggHeader(){
+  document.getElementById('agShoes').textContent=state.shoes.length;
+  document.getElementById('agPairs').textContent=state.shoes.reduce((a,s)=>a+s.pairs.length,0);
+  document.getElementById('agHands').textContent=withEnd().reduce((a,s)=>a+s.end,0);
+}
+function renderShoeList(){
+  const el=document.getElementById('shoeList');
+  if(!state.shoes.length){ el.innerHTML='<div class="empty">No shoes.</div>'; return; }
+  el.innerHTML=state.shoes.map(s=>{
+    const cur=s.id===state.curId;
+    return `<div class="shoe-item ${cur?'cur':''}"><div><b>${s.name}</b> <span class="shoe-meta">· ${s.pairs.length} pairs · ${s.end?('ends '+s.end):'no end set'}${cur?' · ACTIVE':''}</span></div>`+
+      `<div style="display:flex;gap:5px">${cur?'':'<button class="btn ghost sm" data-act="act" data-id="'+s.id+'">Open</button>'}`+
+      `<button class="btn ghost sm" data-act="csv" data-id="${s.id}">CSV</button>`+
+      `<button class="btn danger sm" data-act="del" data-id="${s.id}">✕</button></div></div>`;
+  }).join('');
+  el.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.id;
+    if(b.dataset.act==='act'){ state.curId=id; save(); render(); }
+    else if(b.dataset.act==='csv'){ exportCSV(state.shoes.find(s=>s.id===id)); }
+    else if(confirm('Delete this shoe?')){ state.shoes=state.shoes.filter(s=>s.id!==id); if(state.curId===id)state.curId=null; ensureShoe(); save(); render(); }
+  });
+}
+function render(){ syncHeader(); renderPairs(); renderBead(); renderCurStats(); renderSkipTbl(); renderAggHeader(); renderBandTbl('end'); renderBandTbl('start'); renderWait(); renderWindow(); renderGaps(); renderShoeList(); }
+
+/* ---- CSV / JSON ---- */
+function dl(name,text,type){ const b=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); }
+function shoeRows(s){
+  const ps=s.pairs; return ps.map((p,i)=>({
+    shoe_id:s.id,shoe_name:s.name,shoe_end:s.end??'',pair_no:i+1,hand:p.hand,col:p.col,row:p.row,
+    skip_from_prev:i>0?(p.hand-ps[i-1].hand):'',hands_from_end:s.end?(s.end-p.hand):''
+  }));
+}
+function toCSV(rows){ if(!rows.length)return ''; const cols=Object.keys(rows[0]); return cols.join(',')+'\n'+rows.map(r=>cols.map(c=>r[c]).join(',')).join('\n'); }
+function exportCSV(s){ if(!s.pairs.length){ toast('No pairs to export'); return; } dl((s.name.replace(/\s+/g,'_'))+'.csv',toCSV(shoeRows(s)),'text/csv'); toast('Exported '+s.name); }
+function exportAll(){ const rows=[]; state.shoes.forEach(s=>shoeRows(s).forEach(r=>rows.push(r))); if(!rows.length){ toast('Nothing to export'); return; } dl('skiplab_all_'+new Date().toISOString().slice(0,10)+'.csv',toCSV(rows),'text/csv'); toast('Exported all shoes'); }
+
+/* ---- toast ---- */
+let tT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2100); }
+
+/* ---- wiring ---- */
+document.getElementById('inHand').addEventListener('input',deriveColRow);
+document.getElementById('rpc').addEventListener('input',()=>{ const s=cur(); s.rpc=parseInt(document.getElementById('rpc').value,10)||6; deriveColRow(); save(); render(); });
+document.getElementById('btnAdd').onclick=addPair;
+document.getElementById('inHand').addEventListener('keydown',e=>{ if(e.key==='Enter')addPair(); if(e.key==='Backspace'&&!e.target.value){ const s=cur(); if(s.pairs.length){ s.pairs.pop(); save(); render(); } } });
+['inCol','inRow'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter')addPair(); }));
+document.getElementById('shoeName').addEventListener('input',()=>{ cur().name=document.getElementById('shoeName').value; save(); renderShoeList(); syncHeader(); });
+document.getElementById('shoeEnd').addEventListener('input',()=>{ const v=parseInt(document.getElementById('shoeEnd').value,10); cur().end=v>0?v:null; save(); render(); });
+document.getElementById('btnNew').onclick=()=>{ newShoe(); render(); document.getElementById('inHand').focus(); toast('New shoe'); };
+document.getElementById('btnCSV').onclick=()=>exportCSV(cur());
+document.getElementById('btnAllCSV').onclick=exportAll;
+document.getElementById('btnBase').onclick=()=>{ state.base=parseFloat(document.getElementById('baseInp').value)||14.29; save(); render(); toast('Baseline set'); };
+['winA','winB'].forEach(id=>document.getElementById(id).addEventListener('input',renderWindow));
+document.getElementById('btnWipe').onclick=()=>{ if(confirm('Erase ALL shoes? Back up JSON first if unsure.')){ state={shoes:[],curId:null,base:state.base}; newShoe(false); save(); render(); } };
+document.getElementById('btnJSON').onclick=()=>dl('skiplab_backup_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(state,null,2),'application/json');
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(d&&Array.isArray(d.shoes)){ state=d; if(state.base==null)state.base=14.29; ensureShoe(); save(); render(); toast('Imported'); } else toast('Not a Skip Lab file'); }catch(_){ toast('Bad file'); } };
+  r.readAsText(f); e.target.value=''; };
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.agview').forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.getElementById('ag-'+t.dataset.ag).classList.add('active'); });
+
+(async()=>{ await load(); render(); })();
+</script>
+</body>
+</html>
