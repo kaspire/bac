@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pair Lab — Baccarat Pair Statistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt-0:#0a1410;
+    --felt-1:#0e1c16;
+    --felt-2:#12241c;
+    --line:#1f3a2e;
+    --line-soft:#19302541;
+    --ink:#dfeee6;
+    --ink-dim:#8fa89a;
+    --ink-faint:#5f786b;
+    --gold:#c9a227;
+    --gold-soft:#e3c766;
+    --jade:#3fbf86;
+    --jade-dim:#2a7a57;
+    --red:#d96a5a;
+    --amber:#e0a64a;
+    --blue:#6fb0d6;
+    --panel:#0f1d17;
+    --shadow:0 18px 50px -20px rgba(0,0,0,.8);
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --disp:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--mono);
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 20% -10%, #16302330 0%, transparent 55%),
+      radial-gradient(120% 90% at 100% 0%, #0c1f1530 0%, transparent 50%),
+      var(--felt-0);
+    min-height:100vh;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:34px 22px 90px}
+
+  /* Header */
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:8px}
+  .brand h1{font-family:var(--disp);font-weight:600;font-size:clamp(30px,5vw,46px);margin:0;letter-spacing:-.01em;line-height:.98}
+  .brand h1 .em{font-style:italic;color:var(--gold-soft)}
+  .brand p{margin:8px 0 0;color:var(--ink-dim);font-size:12.5px;max-width:46ch}
+  .savebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+  #saveState{color:var(--jade)}
+
+  /* Tabs */
+  nav.tabs{display:flex;gap:2px;flex-wrap:wrap;margin:26px 0 22px;border-bottom:1px solid var(--line)}
+  .tab{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;color:var(--ink-faint);padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--gold-soft);border-bottom-color:var(--gold)}
+
+  .view{display:none;animation:fade .35s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Panels */
+  .panel{background:linear-gradient(180deg,var(--panel),var(--felt-1));border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);margin-bottom:20px}
+  .panel h2{font-family:var(--disp);font-weight:500;font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  .panel .sub{color:var(--ink-dim);font-size:12px;margin:0 0 18px}
+  .section-label{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px}
+
+  /* Buttons */
+  button{font-family:var(--mono);cursor:pointer}
+  .btn{border:1px solid var(--line);background:var(--felt-2);color:var(--ink);border-radius:9px;padding:9px 15px;font-size:12.5px;letter-spacing:.03em;transition:.15s}
+  .btn:hover{border-color:var(--jade-dim);color:#fff}
+  .btn.gold{background:linear-gradient(180deg,#caa42c,#a8861a);color:#1b1606;border-color:#d8b943;font-weight:600}
+  .btn.gold:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--red);border-color:#5a2a23}
+  .btn.danger:hover{background:#2a1512;color:#ffb0a3}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  /* Entry pad */
+  .entry-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin-bottom:18px}
+  .field label{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:var(--felt-0);color:var(--ink-dim);border-radius:8px;min-width:40px;padding:9px 0;text-align:center;font-size:13px;font-weight:600;flex:1;transition:.12s}
+  .chip:hover{border-color:var(--jade-dim);color:var(--ink)}
+  .chip.on{background:var(--jade-dim);border-color:var(--jade);color:#eafff4}
+  .chip.side-P.on{background:#1d4b6e;border-color:var(--blue);color:#e7f4fc}
+  .chip.side-B.on{background:#5a2a23;border-color:var(--red);color:#ffe2db}
+  .chip.side-T.on{background:#5b4a17;border-color:var(--gold);color:#fff4d6}
+  .chip.tog.on{background:#5b4a17;border-color:var(--gold);color:#fff4d6}
+  .totals .chip{min-width:34px}
+  .entry-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line-soft);padding-top:16px}
+  .hint{color:var(--ink-faint);font-size:11px}
+
+  /* Shoe table */
+  .shoe-strip{display:flex;flex-wrap:wrap;gap:5px;margin-top:14px}
+  .cell{position:relative;width:38px;height:46px;border:1px solid var(--line);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--felt-0)}
+  .cell .h{position:absolute;top:2px;left:4px;font-size:8px;color:var(--ink-faint);font-weight:500}
+  .cell.P{color:var(--blue)} .cell.B{color:var(--red)} .cell.T{color:var(--gold-soft)}
+  .cell .pp{position:absolute;bottom:2px;font-size:8px;letter-spacing:.04em;color:var(--jade);font-weight:700}
+  .cell.haspair{box-shadow:0 0 0 1px var(--jade) inset, 0 0 12px -4px var(--jade)}
+
+  table.data{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+  table.data th,table.data td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line-soft)}
+  table.data th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;border-bottom:1px solid var(--line)}
+  table.data td:first-child,table.data th:first-child{text-align:left}
+  table.data tr:hover td{background:#13241c}
+  .num{font-variant-numeric:tabular-nums}
+  .verdict{font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:6px;white-space:nowrap;display:inline-block}
+  .v-noise{background:#152a20;color:var(--ink-dim)}
+  .v-small{background:#1a2330;color:var(--blue)}
+  .v-mild{background:#3a3315;color:var(--amber)}
+  .v-strong{background:#1f3d2c;color:var(--jade)}
+  .barcell{position:relative}
+  .bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#1f4a36,#2a7a5733);border-radius:0 6px 6px 0;z-index:0}
+  .barcell span{position:relative;z-index:1}
+
+  /* Stat cards */
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:6px}
+  .stat{border:1px solid var(--line);border-radius:11px;padding:15px 16px;background:var(--felt-0)}
+  .stat .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+  .stat .v{font-family:var(--disp);font-size:30px;font-weight:600;line-height:1.1;margin-top:5px;font-variant-numeric:tabular-nums}
+  .stat .d{font-size:11px;margin-top:3px;color:var(--ink-dim)}
+  .stat .d.up{color:var(--jade)} .stat .d.down{color:var(--red)}
+
+  /* Shoe list */
+  .shoe-list{display:flex;flex-direction:column;gap:8px}
+  .shoe-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:9px;padding:11px 14px;background:var(--felt-0);font-size:12.5px}
+  .shoe-item.cur{border-color:var(--gold);box-shadow:0 0 18px -8px var(--gold)}
+  .shoe-meta{color:var(--ink-dim);font-size:11px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  details.math{border:1px solid var(--line);border-radius:11px;background:var(--felt-1);padding:0 18px;margin-bottom:20px}
+  details.math summary{cursor:pointer;padding:16px 0;font-family:var(--disp);font-size:16px;color:var(--gold-soft);list-style:none}
+  details.math summary::-webkit-details-marker{display:none}
+  details.math summary::before{content:"▸ ";color:var(--ink-faint)}
+  details.math[open] summary::before{content:"▾ "}
+  details.math .body{padding-bottom:18px;font-size:12.5px;color:var(--ink-dim);line-height:1.65}
+  details.math .body b{color:var(--ink)}
+  details.math .body code{background:var(--felt-0);padding:1px 6px;border-radius:5px;color:var(--gold-soft);font-size:11.5px}
+
+  input.txt{font-family:var(--mono);background:var(--felt-0);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 11px;font-size:13px;width:90px;text-align:right}
+  input.txt:focus{outline:none;border-color:var(--jade)}
+  .inline-set{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0c1b14;border:1px solid var(--jade-dim);color:var(--ink);padding:11px 20px;border-radius:10px;font-size:12.5px;z-index:50;opacity:0;transition:.3s;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+  .empty{color:var(--ink-faint);font-size:12.5px;font-style:italic;padding:18px 0}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--ink-faint);margin-top:14px}
+  .legend b{color:var(--ink-dim);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Pair&nbsp;<span class="em">Lab</span></h1>
+      <p>A logging &amp; significance workbench for the baccarat pair bet. Records shoes hand-by-hand, then tests your hypotheses (after 7/9, streaks, position, distance-from-end) against the chance baseline — so signal can be told apart from noise.</p>
+    </div>
+    <div class="savebar">
+      <span class="pill" id="saveState">memory only</span>
+      <button class="btn ghost" id="btnExport">Export JSON</button>
+      <button class="btn ghost" id="btnImport">Import</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none">
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="entry">Log</button>
+    <button class="tab" data-view="overview">Overview</button>
+    <button class="tab" data-view="trigger">After a number</button>
+    <button class="tab" data-view="streak">Streaks</button>
+    <button class="tab" data-view="position">Position &amp; gaps</button>
+    <button class="tab" data-view="shoes">Shoes</button>
+  </nav>
+
+  <!-- ============ LOG ============ -->
+  <section class="view active" id="view-entry">
+    <div class="panel">
+      <h2>Record a hand</h2>
+      <p class="sub">Current shoe: <b id="curShoeName">—</b> · <span id="curShoeCount">0</span> hands logged. Enter the winning side, the winning total (0–9), and tick any pair on the opening two cards.</p>
+
+      <div class="entry-grid">
+        <div class="field">
+          <label>Result</label>
+          <div class="seg" id="segSide">
+            <button class="chip side-P" data-side="P">Player</button>
+            <button class="chip side-B" data-side="B">Banker</button>
+            <button class="chip side-T" data-side="T">Tie</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Pairs (opening 2 cards)</label>
+          <div class="seg">
+            <button class="chip tog" id="togPP">Player pair</button>
+            <button class="chip tog" id="togBP">Banker pair</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:18px">
+        <label>Winning total</label>
+        <div class="seg totals" id="segTotal">
+          <button class="chip" data-total="0">0</button>
+          <button class="chip" data-total="1">1</button>
+          <button class="chip" data-total="2">2</button>
+          <button class="chip" data-total="3">3</button>
+          <button class="chip" data-total="4">4</button>
+          <button class="chip" data-total="5">5</button>
+          <button class="chip" data-total="6">6</button>
+          <button class="chip" data-total="7">7</button>
+          <button class="chip" data-total="8">8</button>
+          <button class="chip" data-total="9">9</button>
+        </div>
+      </div>
+
+      <div class="entry-actions">
+        <button class="btn gold" id="btnAddHand">Add hand ↵</button>
+        <button class="btn danger" id="btnUndo">Undo last</button>
+        <span class="hint">Tip: keyboard — <b>P / B / T</b> set side, <b>0–9</b> set total, <b>Enter</b> adds, <b>Backspace</b> undoes.</span>
+      </div>
+
+      <div class="shoe-strip" id="shoeStrip"></div>
+      <div class="legend">
+        <span><b>P</b> player win</span><span><b>B</b> banker win</span><span><b>T</b> tie</span>
+        <span><b style="color:var(--jade)">glow</b> = pair occurred</span>
+        <span><b>P·</b>/<b>B·</b> = which side paired</span>
+      </div>
+
+      <div class="entry-actions" style="margin-top:18px">
+        <button class="btn" id="btnNewShoe">Finish &amp; start new shoe</button>
+        <span class="hint" id="shoeProgress"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section class="view" id="view-overview">
+    <div class="panel">
+      <h2>Overview</h2>
+      <p class="sub">Observed pair frequencies across every logged hand, against the fresh-shoe chance baseline.</p>
+      <div class="stat-row" id="ovStats"></div>
+      <div class="legend"><span>Baseline = probability on the first two cards from a full 8-deck shoe. Deviations within the confidence band are ordinary sampling noise.</span></div>
+    </div>
+    <div class="panel">
+      <p class="section-label">Pairs per shoe — distribution</p>
+      <table class="data" id="perShoeTbl"><thead><tr><th>Pairs in a shoe</th><th>Shoes</th><th>Share</th></tr></thead><tbody></tbody></table>
+      <p class="sub" style="margin-top:14px">Tests the "max ~5 per shoe then it dries up" idea. With enough shoes this should look like a Poisson-ish spread around the mean, not a wall at 5.</p>
+    </div>
+  </section>
+
+  <!-- ============ AFTER A NUMBER ============ -->
+  <section class="view" id="view-trigger">
+    <div class="panel">
+      <h2>Pair rate after a given winning total</h2>
+      <p class="sub">For each total <i>t</i>, looks at every hand that <i>immediately follows</i> a hand whose winning total was <i>t</i>, and measures the Either-pair rate among those hands. This is the direct test of "pairs strike after a 7 / after a 9."</p>
+      <table class="data" id="trigTbl">
+        <thead><tr><th>After total</th><th>Following hands</th><th>Pairs</th><th>Observed</th><th>Baseline</th><th>z</th><th>Read</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="legend">
+        <span><b>z</b> = standardised gap from baseline.</span>
+        <span>|z|&lt;2 ≈ noise · 2–3 mild · &gt;3 notable</span>
+        <span><b>Watch the base rate:</b> a total that occurs often will rack up "pairs after it" just by being common — what matters is the <i>rate</i>, not the count.</span>
+      </div>
+    </div>
+    <div class="panel" id="combo79"></div>
+  </section>
+
+  <!-- ============ STREAKS ============ -->
+  <section class="view" id="view-streak">
+    <div class="panel">
+      <h2>Streaks of 7 / 9</h2>
+      <p class="sub">Pair rate on the hand <i>following</i> a run of consecutive 7s (or 9s) of length 1, 2, and 3+. Tests whether "7 or 9 going 1-2-3 in a row" changes anything.</p>
+      <div class="grid2">
+        <div><p class="section-label">After N consecutive 7s</p><table class="data" id="streak7"><thead><tr><th>Run length</th><th>Next hands</th><th>Pairs</th><th>Rate</th><th>Read</th></tr></thead><tbody></tbody></table></div>
+        <div><p class="section-label">After N consecutive 9s</p><table class="data" id="streak9"><thead><tr><th>Run length</th><th>Next hands</th><th>Pairs</th><th>Rate</th><th>Read</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ POSITION & GAPS ============ -->
+  <section class="view" id="view-position">
+    <div class="panel">
+      <h2>Where in the shoe</h2>
+      <p class="sub">Pair rate by hand-number band (from the start) and by distance from the end of finished shoes.</p>
+      <div class="grid2">
+        <div><p class="section-label">By hand number</p><table class="data" id="posStart"><thead><tr><th>Hands</th><th>n</th><th>Pairs</th><th>Rate</th><th>Read</th></tr></thead><tbody></tbody></table></div>
+        <div><p class="section-label">By distance from end (finished shoes)</p><table class="data" id="posEnd"><thead><tr><th>Hands from end</th><th>n</th><th>Pairs</th><th>Rate</th><th>Read</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="section-label">Gap between consecutive pairs (hands)</p>
+      <table class="data" id="gapTbl"><thead><tr><th>Gap (hands since last pair)</th><th>Count</th><th>Share</th></tr></thead><tbody></tbody></table>
+      <p class="sub" style="margin-top:14px">Tests "usually repeats within x hands, but sometimes ~25 apart." Mean gap <b id="gapMean">—</b>, max <b id="gapMax">—</b>.</p>
+    </div>
+  </section>
+
+  <!-- ============ SHOES ============ -->
+  <section class="view" id="view-shoes">
+    <div class="panel">
+      <h2>Shoes &amp; data</h2>
+      <p class="sub">Switch the active shoe, review, or delete. Totals: <b id="totShoes">0</b> shoes, <b id="totHands">0</b> hands, <b id="totPairs">0</b> pairs.</p>
+      <div class="inline-set" style="margin-bottom:18px">
+        <div class="field"><label>Player-pair baseline %</label><input class="txt" id="bP" value="7.47"></div>
+        <div class="field"><label>Banker-pair baseline %</label><input class="txt" id="bB" value="7.47"></div>
+        <div class="field"><label>Either-pair baseline %</label><input class="txt" id="bE" value="14.29"></div>
+        <button class="btn" id="btnSaveBase">Apply baselines</button>
+      </div>
+      <div class="shoe-list" id="shoeList"></div>
+      <div class="entry-actions" style="margin-top:20px">
+        <button class="btn danger" id="btnWipe">Erase everything</button>
+        <span class="hint">Export first if you want a backup — Import will restore it.</span>
+      </div>
+    </div>
+  </section>
+
+  <details class="math">
+    <summary>About the math — read me once</summary>
+    <div class="body">
+      <p><b>Baseline.</b> On the first two cards from a full 8-deck shoe, a pair on one side ≈ <code>31/415 ≈ 7.47%</code>. "Either side" ≈ <code>14.3%</code>. These are what every analysis compares against.</p>
+      <p><b>House edge is the wall.</b> Player/Banker pair pays 11:1 → edge ≈ <b>10.4%</b>. "Either pair" 5:1 → edge ≈ <b>14%</b>. No bet-sizing scheme changes the expected value of a negative-edge bet; a capped progression (1 unit, +1 per loss, stop at 10) only reshapes the <i>distribution</i> into many small wins and rarer larger losses. It will feel like a steady +1/shoe right up until it doesn't. That feeling is the system working as designed, not an edge.</p>
+      <p><b>"After a 7" and memory.</b> The next two cards depend only on what remains in the shoe. The previous total has no causal link to the next pair beyond removing those specific cards — a tiny card-removal effect that is usually smaller than your sampling noise and does not reliably point any direction. If 7 is a common winning total, "pairs after 7" will look big purely because 7 is common. Always read the <i>rate</i> column, never the count.</p>
+      <p><b>Multiple comparisons.</b> This tool tests ~10 totals × several streak lengths × several bands. If everything is pure noise, you should still expect roughly 1 in 20 cells to cross |z|&gt;2 by chance. So treat a lone "notable" cell skeptically; only a stable effect that survives more data and shows up consistently is worth anything.</p>
+      <p><b>What this tool is good for:</b> honestly measuring whether any of your patterns beat chance. What it can't do: make a 10–14% house edge disappear. Use it as a curiosity log and a noise-detector.</p>
+    </div>
+  </details>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- state ---------- */
+const KEY = "pairlab.v1";
+const BASE = { p: 7.47, b: 7.47, e: 14.29 };
+let state = { shoes: [], curId: null, base: { ...BASE } };
+let draft = { side: null, total: null, pp: false, bp: false };
+let storageOK = false;
+
+/* ---------- persistence (window.storage if present, else memory; JSON export/import always) ---------- */
+async function save(){
+  try{
+    if(window.storage && window.storage.set){
+      await window.storage.set(KEY, JSON.stringify(state), false);
+      storageOK = true;
+      setSaveState("saved");
+      return;
+    }
+  }catch(e){ storageOK=false; }
+  setSaveState("memory only");
+}
+async function load(){
+  try{
+    if(window.storage && window.storage.get){
+      const r = await window.storage.get(KEY, false);
+      if(r && r.value){ state = JSON.parse(r.value); storageOK=true; }
+      setSaveState(storageOK ? "saved" : "memory only");
+    }
+  }catch(e){ /* no key yet or no storage */ setSaveState(window.storage ? "saved" : "memory only"); }
+  if(!state.base) state.base = { ...BASE };
+  if(!Array.isArray(state.shoes)) state.shoes = [];
+  ensureShoe();
+}
+function setSaveState(t){ const el=document.getElementById('saveState'); if(el) el.textContent=t; }
+
+/* ---------- helpers ---------- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function curShoe(){ return state.shoes.find(s=>s.id===state.curId) || null; }
+function ensureShoe(){
+  if(!curShoe()){
+    if(state.shoes.length){ state.curId = state.shoes[state.shoes.length-1].id; }
+    else newShoe(false);
+  }
+}
+function newShoe(persist=true){
+  const n = state.shoes.length+1;
+  const s = { id: uid(), name: "Shoe "+n, created: Date.now(), finished:false, hands: [] };
+  state.shoes.push(s); state.curId = s.id;
+  if(persist) save();
+  return s;
+}
+const isPair = h => h.pp || h.bp;
+function allHands(){ // flat with shoe ref + index
+  const out=[];
+  state.shoes.forEach(s=> s.hands.forEach((h,i)=> out.push({h,s,i,len:s.hands.length})));
+  return out;
+}
+
+/* ---------- statistics ---------- */
+function zTest(k,n,p0){ // p0 in %
+  if(n<=0) return null;
+  const p=p0/100, ph=k/n, se=Math.sqrt(p*(1-p)/n);
+  return se>0 ? (ph-p)/se : 0;
+}
+function readVerdict(z,n,minN=30){
+  if(n<minN) return {cls:'v-small',txt:'too few ('+n+')'};
+  const a=Math.abs(z);
+  if(a<2) return {cls:'v-noise',txt:'noise'};
+  if(a<3) return {cls:'v-mild',txt:'mild'};
+  return {cls:'v-strong',txt:'notable'};
+}
+function pct(k,n){ return n? (100*k/n) : 0; }
+function fmt(x,d=1){ return x.toFixed(d); }
+
+/* ---------- entry UI ---------- */
+function paintDraft(){
+  document.querySelectorAll('#segSide .chip').forEach(c=>c.classList.toggle('on',c.dataset.side===draft.side));
+  document.querySelectorAll('#segTotal .chip').forEach(c=>c.classList.toggle('on',c.dataset.total===String(draft.total)));
+  document.getElementById('togPP').classList.toggle('on',draft.pp);
+  document.getElementById('togBP').classList.toggle('on',draft.bp);
+}
+function resetDraft(){ draft={side:null,total:null,pp:false,bp:false}; paintDraft(); }
+
+function addHand(){
+  const s=curShoe();
+  if(draft.side===null){ toast('Pick a result (P/B/T)'); return; }
+  if(draft.total===null){ toast('Pick the winning total 0–9'); return; }
+  s.hands.push({ r:draft.side, t:draft.total, pp:draft.pp, bp:draft.bp });
+  resetDraft(); save(); renderAll();
+}
+function undo(){ const s=curShoe(); if(s && s.hands.length){ s.hands.pop(); save(); renderAll(); } }
+
+function renderStrip(){
+  const s=curShoe(), el=document.getElementById('shoeStrip'); el.innerHTML='';
+  document.getElementById('curShoeName').textContent = s?s.name:'—';
+  document.getElementById('curShoeCount').textContent = s?s.hands.length:0;
+  document.getElementById('shoeProgress').textContent = s? (s.hands.length+' hands · most live shoes run ~60–75'):'';
+  if(!s||!s.hands.length){ el.innerHTML='<span class="empty">No hands yet — log the first one above.</span>'; return; }
+  s.hands.forEach((h,i)=>{
+    const d=document.createElement('div');
+    d.className='cell '+h.r+(isPair(h)?' haspair':'');
+    let tag = h.pp&&h.bp?'P·B·': h.pp?'P·': h.bp?'B·':'';
+    d.innerHTML='<span class="h">'+(i+1)+'</span>'+h.r+(h.t!=null?'<span style="font-size:9px;color:var(--ink-faint)">'+h.t+'</span>':'')+(tag?'<span class="pp">'+tag+'</span>':'');
+    el.appendChild(d);
+  });
+}
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const hs=allHands().map(x=>x.h);
+  const n=hs.length;
+  const kP=hs.filter(h=>h.pp).length, kB=hs.filter(h=>h.bp).length, kE=hs.filter(isPair).length;
+  const cards=[
+    ['Hands logged', String(n), ''],
+    ['Either-pair', fmt(pct(kE,n))+'%', deltaTxt(pct(kE,n),state.base.e,n,kE)],
+    ['Player-pair', fmt(pct(kP,n))+'%', deltaTxt(pct(kP,n),state.base.p,n,kP)],
+    ['Banker-pair', fmt(pct(kB,n))+'%', deltaTxt(pct(kB,n),state.base.b,n,kB)],
+  ];
+  document.getElementById('ovStats').innerHTML = cards.map(([k,v,d])=>
+    `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="d ${d.cls||''}">${d.txt||d}</div></div>`).join('');
+
+  // pairs per shoe
+  const counts={};
+  state.shoes.forEach(s=>{ const c=s.hands.filter(isPair).length; counts[c]=(counts[c]||0)+1; });
+  const tot=state.shoes.length, tb=document.querySelector('#perShoeTbl tbody');
+  const keys=Object.keys(counts).map(Number).sort((a,b)=>a-b);
+  tb.innerHTML = keys.length? keys.map(c=>{
+    const share=pct(counts[c],tot);
+    return `<tr><td class="num">${c}</td><td class="num">${counts[c]}</td><td class="barcell num"><div class="bar" style="width:${share}%"></div><span>${fmt(share)}%</span></td></tr>`;
+  }).join('') : '<tr><td colspan="3" class="empty">No shoes yet.</td></tr>';
+}
+function deltaTxt(obs,base,n,k){
+  if(n<30) return {txt:'baseline '+fmt(base)+'% · need more data', cls:''};
+  const z=zTest(k,n,base), d=obs-base;
+  const cls = Math.abs(z)<2?'':(d>0?'up':'down');
+  return {txt:(d>=0?'+':'')+fmt(d)+' vs '+fmt(base)+'%  (z '+fmt(z,1)+')', cls};
+}
+
+/* ---------- after a number ---------- */
+function followers(){ // hands that follow another hand in same shoe, paired with predecessor total
+  const out=[];
+  state.shoes.forEach(s=>{
+    for(let i=1;i<s.hands.length;i++){ out.push({prevTotal:s.hands[i-1].t, h:s.hands[i]}); }
+  });
+  return out;
+}
+function renderTrigger(){
+  const f=followers(), tb=document.querySelector('#trigTbl tbody');
+  let rows='';
+  for(let t=0;t<=9;t++){
+    const sub=f.filter(x=>x.prevTotal===t);
+    const n=sub.length, k=sub.filter(x=>isPair(x.h)).length, rate=pct(k,n);
+    const z=zTest(k,n,state.base.e), v=readVerdict(z,n);
+    const hi = (t===7||t===9)?' style="background:#11241b"':'';
+    rows+=`<tr${hi}><td class="num">${t}</td><td class="num">${n}</td><td class="num">${k}</td><td class="barcell num"><div class="bar" style="width:${Math.min(rate,40)/40*100}%"></div><span>${n?fmt(rate)+'%':'—'}</span></td><td class="num">${fmt(state.base.e)}%</td><td class="num">${n>=30?fmt(z,1):'—'}</td><td><span class="verdict ${v.cls}">${v.txt}</span></td></tr>`;
+  }
+  tb.innerHTML=rows;
+
+  // combined 7 or 9
+  const sub=f.filter(x=>x.prevTotal===7||x.prevTotal===9);
+  const n=sub.length,k=sub.filter(x=>isPair(x.h)).length,rate=pct(k,n),z=zTest(k,n,state.base.e),v=readVerdict(z,n);
+  document.getElementById('combo79').innerHTML=
+    `<p class="section-label">Combined: hand after a 7 OR 9</p>
+     <div class="stat-row">
+       <div class="stat"><div class="k">Following hands</div><div class="v">${n}</div></div>
+       <div class="stat"><div class="k">Either-pair rate</div><div class="v">${n?fmt(rate)+'%':'—'}</div><div class="d">baseline ${fmt(state.base.e)}%</div></div>
+       <div class="stat"><div class="k">z-score</div><div class="v">${n>=30?fmt(z,1):'—'}</div><div class="d"><span class="verdict ${v.cls}">${v.txt}</span></div></div>
+     </div>`;
+}
+
+/* ---------- streaks ---------- */
+function streakRows(val){
+  // count consecutive `val` totals, then look at the immediately following hand's pair
+  const buckets={1:{n:0,k:0},2:{n:0,k:0},3:{n:0,k:0}}; // 3 means 3+
+  state.shoes.forEach(s=>{
+    let run=0;
+    for(let i=0;i<s.hands.length;i++){
+      const cur=s.hands[i];
+      if(run>0 && i<s.hands.length){ // current hand follows a run of length `run`
+        // recorded below when entering
+      }
+      // when we arrive at hand i and previous run was r>0, this hand is the "follower"
+      // handled by checking before updating run:
+      if(i>0){
+        // previous run length is tracked in `run` AFTER processing prev hand
+      }
+      if(run>0){
+        const b=Math.min(run,3);
+        buckets[b].n++; if(isPair(cur)) buckets[b].k++;
+      }
+      run = (cur.t===val) ? run+1 : 0;
+    }
+  });
+  return buckets;
+}
+function renderStreaks(){
+  [[7,'streak7'],[9,'streak9']].forEach(([val,id])=>{
+    const b=streakRows(val), tb=document.querySelector('#'+id+' tbody');
+    const labels={1:'after 1',2:'after 2',3:'after 3+'};
+    tb.innerHTML=[1,2,3].map(L=>{
+      const n=b[L].n,k=b[L].k,rate=pct(k,n),z=zTest(k,n,state.base.e),v=readVerdict(z,n,20);
+      return `<tr><td>${labels[L]} ×${val}</td><td class="num">${n}</td><td class="num">${k}</td><td class="num">${n?fmt(rate)+'%':'—'}</td><td><span class="verdict ${v.cls}">${v.txt}</span></td></tr>`;
+    }).join('');
+  });
+}
+
+/* ---------- position & gaps ---------- */
+function renderPosition(){
+  // by hand number
+  const bands=[[1,15],[16,30],[31,45],[46,60],[61,999]];
+  const ps=document.querySelector('#posStart tbody');
+  ps.innerHTML=bands.map(([a,b])=>{
+    let n=0,k=0;
+    state.shoes.forEach(s=> s.hands.forEach((h,i)=>{ const hn=i+1; if(hn>=a&&hn<=b){n++; if(isPair(h))k++;} }));
+    const rate=pct(k,n),z=zTest(k,n,state.base.e),v=readVerdict(z,n);
+    const lab=b>900?(a+'+'):(a+'–'+b);
+    return `<tr><td>${lab}</td><td class="num">${n}</td><td class="num">${k}</td><td class="num">${n?fmt(rate)+'%':'—'}</td><td><span class="verdict ${v.cls}">${v.txt}</span></td></tr>`;
+  }).join('');
+
+  // distance from end (finished shoes only -> use every shoe's known length)
+  const ebands=[[0,5],[6,10],[11,20],[21,35],[36,999]];
+  const pe=document.querySelector('#posEnd tbody');
+  pe.innerHTML=ebands.map(([a,b])=>{
+    let n=0,k=0;
+    state.shoes.forEach(s=>{ const L=s.hands.length; s.hands.forEach((h,i)=>{ const fromEnd=L-1-i; if(fromEnd>=a&&fromEnd<=b){n++; if(isPair(h))k++;} }); });
+    const rate=pct(k,n),z=zTest(k,n,state.base.e),v=readVerdict(z,n);
+    const lab=b>900?(a+'+'):(a+'–'+b);
+    return `<tr><td>${lab}</td><td class="num">${n}</td><td class="num">${k}</td><td class="num">${n?fmt(rate)+'%':'—'}</td><td><span class="verdict ${v.cls}">${v.txt}</span></td></tr>`;
+  }).join('');
+
+  // gaps between consecutive pairs (within a shoe)
+  const gaps=[];
+  state.shoes.forEach(s=>{
+    let last=null;
+    s.hands.forEach((h,i)=>{ if(isPair(h)){ if(last!==null) gaps.push(i-last); last=i; } });
+  });
+  const gtb=document.querySelector('#gapTbl tbody');
+  if(!gaps.length){ gtb.innerHTML='<tr><td colspan="3" class="empty">Need at least two pairs in a shoe.</td></tr>';
+    document.getElementById('gapMean').textContent='—'; document.getElementById('gapMax').textContent='—';
+  } else {
+    const gb={'1':0,'2–3':0,'4–6':0,'7–12':0,'13–20':0,'21+':0};
+    gaps.forEach(g=>{ gb[g<=1?'1':g<=3?'2–3':g<=6?'4–6':g<=12?'7–12':g<=20?'13–20':'21+']++; });
+    const tot=gaps.length;
+    gtb.innerHTML=Object.entries(gb).map(([lab,c])=>{
+      const sh=pct(c,tot);
+      return `<tr><td>${lab}</td><td class="num">${c}</td><td class="barcell num"><div class="bar" style="width:${sh}%"></div><span>${fmt(sh)}%</span></td></tr>`;
+    }).join('');
+    document.getElementById('gapMean').textContent=fmt(gaps.reduce((a,b)=>a+b,0)/gaps.length,1)+' hands';
+    document.getElementById('gapMax').textContent=Math.max(...gaps)+' hands';
+  }
+}
+
+/* ---------- shoes ---------- */
+function renderShoes(){
+  document.getElementById('totShoes').textContent=state.shoes.length;
+  const hs=allHands().map(x=>x.h);
+  document.getElementById('totHands').textContent=hs.length;
+  document.getElementById('totPairs').textContent=hs.filter(isPair).length;
+  const list=document.getElementById('shoeList');
+  if(!state.shoes.length){ list.innerHTML='<span class="empty">No shoes.</span>'; return; }
+  list.innerHTML=state.shoes.map(s=>{
+    const pr=s.hands.filter(isPair).length;
+    const cur=s.id===state.curId;
+    return `<div class="shoe-item ${cur?'cur':''}">
+      <div><b>${s.name}</b> <span class="shoe-meta">· ${s.hands.length} hands · ${pr} pairs${cur?' · ACTIVE':''}</span></div>
+      <div style="display:flex;gap:6px">
+        ${cur?'':'<button class="btn ghost" data-act="activate" data-id="'+s.id+'">Make active</button>'}
+        <button class="btn danger" data-act="del" data-id="${s.id}">Delete</button>
+      </div></div>`;
+  }).join('');
+  list.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.id;
+    if(b.dataset.act==='activate'){ state.curId=id; save(); renderAll(); toast('Switched active shoe'); }
+    else { if(confirm('Delete this shoe permanently?')){ state.shoes=state.shoes.filter(x=>x.id!==id); if(state.curId===id) state.curId=null; ensureShoe(); save(); renderAll(); } }
+  });
+  document.getElementById('bP').value=state.base.p;
+  document.getElementById('bB').value=state.base.b;
+  document.getElementById('bE').value=state.base.e;
+}
+
+/* ---------- render all ---------- */
+function renderAll(){ renderStrip(); renderOverview(); renderTrigger(); renderStreaks(); renderPosition(); renderShoes(); }
+
+/* ---------- toast ---------- */
+let tT;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('view-'+t.dataset.view).classList.add('active');
+});
+document.querySelectorAll('#segSide .chip').forEach(c=>c.onclick=()=>{ draft.side=c.dataset.side; paintDraft(); });
+document.querySelectorAll('#segTotal .chip').forEach(c=>c.onclick=()=>{ draft.total=+c.dataset.total; paintDraft(); });
+document.getElementById('togPP').onclick=()=>{ draft.pp=!draft.pp; paintDraft(); };
+document.getElementById('togBP').onclick=()=>{ draft.bp=!draft.bp; paintDraft(); };
+document.getElementById('btnAddHand').onclick=addHand;
+document.getElementById('btnUndo').onclick=undo;
+document.getElementById('btnNewShoe').onclick=()=>{ if(curShoe()) curShoe().finished=true; newShoe(); renderAll(); toast('New shoe started'); };
+document.getElementById('btnSaveBase').onclick=()=>{
+  state.base={ p:parseFloat(document.getElementById('bP').value)||BASE.p, b:parseFloat(document.getElementById('bB').value)||BASE.b, e:parseFloat(document.getElementById('bE').value)||BASE.e };
+  save(); renderAll(); toast('Baselines applied');
+};
+document.getElementById('btnWipe').onclick=()=>{ if(confirm('Erase ALL shoes and hands? Export first if unsure.')){ state={shoes:[],curId:null,base:{...state.base}}; newShoe(false); save(); renderAll(); toast('Wiped'); } };
+
+document.getElementById('btnExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pairlab-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  toast('Exported backup');
+};
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(d&&Array.isArray(d.shoes)){ state=d; if(!state.base)state.base={...BASE}; ensureShoe(); save(); renderAll(); toast('Imported'); } else toast('Not a Pair Lab file'); }catch(_){ toast('Bad file'); } };
+  r.readAsText(f); e.target.value='';
+};
+
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if(!document.getElementById('view-entry').classList.contains('active')) return;
+  const k=e.key.toLowerCase();
+  if(k==='p'){draft.side='P';paintDraft();}
+  else if(k==='b'){draft.side='B';paintDraft();}
+  else if(k==='t'){draft.side='T';paintDraft();}
+  else if(/^[0-9]$/.test(k)){draft.total=+k;paintDraft();}
+  else if(e.key==='Enter'){addHand();}
+  else if(e.key==='Backspace'){e.preventDefault();undo();}
+});
+
+/* ---------- boot ---------- */
+(async()=>{ await load(); resetDraft(); renderAll(); })();
+</script>
+</body>
+</html>
