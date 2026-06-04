@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survival Staking Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+SC:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt-0:#0a2018; --felt-1:#0e2a1f; --felt-2:#123528;
+    --line:rgba(201,168,74,.22); --line-soft:rgba(201,168,74,.10);
+    --gold:#c9a84a; --gold-bright:#e3c878; --gold-dim:#8f7a3c;
+    --ivory:#ece3cf; --ivory-dim:#b9b29a;
+    --green-good:#79c98b; --red-bad:#d77b6e; --sit:#6f7d72;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"Cormorant Garamond",Georgia,serif;color:var(--ivory);
+    background:radial-gradient(120% 90% at 50% -10%, #16402e 0%, var(--felt-1) 42%, var(--felt-0) 100%);
+    min-height:100vh;padding:48px 22px 80px;-webkit-font-smoothing:antialiased;position:relative;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/></svg>");
+    mix-blend-mode:overlay;}
+  .wrap{max-width:1080px;margin:0 auto;position:relative;}
+  header{text-align:center;margin-bottom:26px;}
+  .eyebrow{font-family:"Cormorant SC",serif;letter-spacing:.42em;font-size:.78rem;color:var(--gold-dim);text-transform:uppercase;margin-bottom:6px;padding-left:.42em;}
+  h1{font-weight:600;font-size:clamp(2.3rem,5vw,3.4rem);line-height:1;color:var(--ivory);letter-spacing:.01em;}
+  h1 em{font-style:italic;color:var(--gold-bright);}
+  .rule{width:120px;height:1px;margin:18px auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  .sub{margin-top:14px;color:var(--ivory-dim);font-size:1.05rem;font-style:italic;}
+
+  .modebar{display:flex;justify-content:center;margin:24px 0 14px;}
+  .modeseg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+  .modeseg button{font-family:"Cormorant SC",serif;letter-spacing:.16em;text-transform:uppercase;font-size:.74rem;
+    color:var(--ivory-dim);background:transparent;border:none;padding:11px 26px;cursor:pointer;transition:.18s;}
+  .modeseg button+button{border-left:1px solid var(--line-soft);}
+  .modeseg button.on{background:linear-gradient(180deg,var(--gold),var(--gold-dim));color:#10261c;}
+  .modeseg button:not(.on):hover{color:var(--gold-bright);}
+
+  .panel{margin:0 auto 22px;border:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(18,53,40,.7),rgba(10,32,24,.55));border-radius:4px;padding:18px 22px;
+    display:flex;flex-wrap:wrap;gap:24px 32px;align-items:flex-end;justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 40px rgba(0,0,0,.35);}
+  .ctl{display:flex;flex-direction:column;gap:7px;}
+  .ctl.hide{display:none;}
+  .ctl label{font-family:"Cormorant SC",serif;letter-spacing:.18em;font-size:.7rem;text-transform:uppercase;color:var(--gold-dim);}
+  .seg{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;}
+  .seg button{font-family:"Cormorant Garamond",serif;font-size:1.12rem;color:var(--ivory-dim);background:transparent;border:none;padding:7px 18px;cursor:pointer;transition:.18s;letter-spacing:.04em;}
+  .seg button+button{border-left:1px solid var(--line-soft);}
+  .seg button.on{background:linear-gradient(180deg,var(--gold),var(--gold-dim));color:#10261c;font-weight:600;}
+  .seg button:not(.on):hover{color:var(--gold-bright);}
+  .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:3px;}
+  .stepper button{width:34px;height:38px;background:transparent;border:none;color:var(--gold);font-size:1.4rem;cursor:pointer;transition:.15s;line-height:1;}
+  .stepper button:hover{background:rgba(201,168,74,.12);color:var(--gold-bright);}
+  .stepper input{width:62px;height:38px;text-align:center;background:transparent;border:none;border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);
+    color:var(--ivory);font-family:"Cormorant Garamond",serif;font-size:1.25rem;font-variant-numeric:tabular-nums;-moz-appearance:textfield;}
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .switch{width:46px;height:24px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.3);position:relative;transition:.2s;flex:none;}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--ivory-dim);transition:.2s;}
+  .toggle.on .switch{background:linear-gradient(180deg,var(--gold),var(--gold-dim));border-color:var(--gold);}
+  .toggle.on .switch::after{left:24px;background:#10261c;}
+  .toggle span{font-family:"Cormorant SC",serif;letter-spacing:.16em;font-size:.72rem;text-transform:uppercase;color:var(--ivory-dim);}
+  .breaker-inputs{display:flex;gap:18px;}
+  .breaker-inputs.hide{opacity:.32;pointer-events:none;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:8px auto 26px;}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .card{border:1px solid var(--line);border-radius:4px;padding:16px 18px;text-align:center;
+    background:linear-gradient(180deg,rgba(18,53,40,.55),rgba(10,32,24,.4));}
+  .card .k{font-family:"Cormorant SC",serif;letter-spacing:.16em;font-size:.62rem;text-transform:uppercase;color:var(--gold-dim);}
+  .card .v{font-size:2.1rem;font-weight:600;color:var(--gold-bright);line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .card .v small{font-size:1rem;color:var(--ivory-dim);font-weight:400;}
+  .card .note{font-size:.92rem;color:var(--ivory-dim);font-style:italic;margin-top:3px;}
+
+  .tablewrap{border:1px solid var(--line);border-radius:5px;overflow:hidden;background:rgba(8,26,19,.55);box-shadow:0 20px 60px rgba(0,0,0,.45);}
+  .scroll{max-height:560px;overflow:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#143a2b,#0f2e22);
+    font-family:"Cormorant SC",serif;letter-spacing:.12em;text-transform:uppercase;font-size:.66rem;color:var(--gold);font-weight:600;
+    padding:14px 14px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  thead th:first-child{text-align:center;}
+  thead th:last-child{text-align:center;}
+  tbody td{padding:9px 14px;text-align:right;font-size:1.18rem;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line-soft);color:var(--ivory);}
+  tbody td:first-child{text-align:center;color:var(--ivory-dim);font-size:1rem;}
+  tbody tr:hover{background:rgba(201,168,74,.06);}
+  .stake{color:var(--gold-bright);font-weight:600;}
+  .badge{display:inline-block;font-family:"Cormorant SC",serif;font-size:.56rem;letter-spacing:.1em;padding:1px 6px;border:1px solid var(--gold-dim);border-radius:10px;color:var(--gold);margin-left:7px;vertical-align:middle;}
+  .status{text-align:center !important;}
+  .pill{display:inline-block;min-width:96px;padding:3px 10px;border-radius:12px;font-family:"Cormorant SC",serif;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;}
+  .pill.good{color:var(--green-good);border:1px solid rgba(121,201,139,.4);background:rgba(121,201,139,.08);}
+  .pill.bad{color:var(--red-bad);border:1px solid rgba(215,123,110,.4);background:rgba(215,123,110,.08);}
+  .pill.hold{color:var(--gold-bright);border:1px solid var(--line);background:rgba(201,168,74,.08);}
+  .net.pos{color:var(--green-good);}
+  .net.neg{color:var(--red-bad);}
+  .net.hold{color:var(--gold-bright);}
+  tr.sitout td{color:var(--sit);font-style:italic;background:rgba(255,255,255,.015);}
+  tr.sitout .stake{color:var(--sit);}
+  tr.capline td{border-top:1px dashed var(--line);}
+  tr.resetline td{border-top:1px solid var(--red-bad);background:rgba(215,123,110,.07);}
+  tr.resetline td:first-child{color:var(--red-bad);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:16px 26px;justify-content:center;margin-top:22px;color:var(--ivory-dim);font-size:.98rem;font-style:italic;}
+  .legend b{color:var(--gold-bright);font-style:normal;font-weight:600;}
+  footer{text-align:center;margin-top:34px;color:var(--gold-dim);font-family:"Cormorant SC",serif;letter-spacing:.18em;font-size:.62rem;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Money Management</div>
+    <h1>The <em>Survival</em> Staircase</h1>
+    <div class="rule"></div>
+    <div class="sub">What to stake on each hand — and exactly when one win can still save you.</div>
+  </header>
+
+  <div class="modebar">
+    <div class="modeseg" id="modeSeg">
+      <button data-mode="stair" class="on">+1 Staircase</button>
+      <button data-mode="hold">Hold the win</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ctl">
+      <label>Payout odds</label>
+      <div class="seg" id="oddsSeg">
+        <button data-odds="5">1 : 5</button>
+        <button data-odds="11" class="on">1 : 11</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label>Stake cap (€)</label>
+      <div class="stepper">
+        <button data-step="cap" data-d="-1">−</button>
+        <input id="cap" type="number" value="10" min="1">
+        <button data-step="cap" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="ctl" id="ctlHands">
+      <label>Hands to plan</label>
+      <div class="stepper">
+        <button data-step="hands" data-d="-5">−</button>
+        <input id="hands" type="number" value="60" min="5">
+        <button data-step="hands" data-d="5">+</button>
+      </div>
+    </div>
+
+    <!-- staircase-only -->
+    <div class="ctl modeStair">
+      <label>Circuit breaker</label>
+      <div class="toggle on" id="brkToggle"><div class="switch"></div><span>Pause cold runs</span></div>
+    </div>
+    <div class="ctl breaker-inputs modeStair" id="brkInputs">
+      <div class="ctl" style="gap:7px;">
+        <label>After N cap-losses</label>
+        <div class="stepper">
+          <button data-step="trig" data-d="-1">−</button><input id="trig" type="number" value="10" min="1"><button data-step="trig" data-d="1">+</button>
+        </div>
+      </div>
+      <div class="ctl" style="gap:7px;">
+        <label>Sit out</label>
+        <div class="stepper">
+          <button data-step="pause" data-d="-1">−</button><input id="pause" type="number" value="10" min="1"><button data-step="pause" data-d="1">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- hold-only -->
+    <div class="ctl modeHold hide">
+      <label>Reset after N losses</label>
+      <div class="stepper">
+        <button data-step="resetN" data-d="-1">−</button><input id="resetN" type="number" value="20" min="2"><button data-step="resetN" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="ctl modeHold hide">
+      <label>Win chance / hand %</label>
+      <div class="stepper">
+        <button data-step="winpc" data-d="-0.5">−</button><input id="winpc" type="number" value="7.5" min="0.5" step="0.5"><button data-step="winpc" data-d="0.5">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tablewrap">
+    <div class="scroll">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <footer>Worst-case all-loss path · plan, don't predict · survival over profit</footer>
+</div>
+
+<script>
+const S = { mode:"stair", odds:11, cap:10, hands:60, brk:true, trig:10, pause:10, resetN:20, winpc:7.5 };
+const $ = id => document.getElementById(id);
+const eur = n => "€" + (Math.round(n*100)/100).toLocaleString("en-IE",{minimumFractionDigits:0,maximumFractionDigits:2});
+
+/* ---------- STAIRCASE MODE ---------- */
+function buildStair(){
+  const base=1, inc=1;
+  const rows=[]; let deficit=0, placedLosses=0, capStreak=0, pauseLeft=0, prevCapped=false;
+  let lastSurvivor=0, exposure=0;
+  for(let h=1; h<=S.hands; h++){
+    if(S.brk && pauseLeft>0){ rows.push({h,sit:true,deficit}); pauseLeft--; if(pauseLeft===0)capStreak=0; continue; }
+    const raw=base+placedLosses*inc, stake=Math.min(raw,S.cap), capped=raw>=S.cap;
+    const dBefore=deficit, winNet=S.odds*stake-dBefore, survives=winNet>=1;
+    if(survives) lastSurvivor=h;
+    rows.push({h,stake,capped,deficitAfter:deficit+stake,winNet,survives,newCap:capped&&!prevCapped});
+    exposure+=stake; deficit+=stake; placedLosses++; prevCapped=capped;
+    if(capped){capStreak++; if(S.brk&&capStreak>=S.trig)pauseLeft=S.pause;} else capStreak=0;
+  }
+  const winsToClear=Math.ceil((deficit+1)/(S.odds*S.cap));
+  setStats([
+    {k:"Max exposure",v:eur(exposure),note:S.hands+" hands, all lost"},
+    {k:"One win saves you through",v:"Hand "+lastSurvivor,note:lastSurvivor>=S.hands?"entire range":"then you must grind"},
+    {k:"Break-even win rate",v:"1 in "+(S.odds+1),note:"better than this = profit"},
+    {k:"Wins to clear the hole",v:winsToClear+"×",note:"clean "+eur(S.cap)+" wins"}
+  ]);
+  setHead(["Hand","Stake to bet","If lost — total down","If WON here — net","One-win recovery"]);
+  $("rows").innerHTML=rows.map(r=>{
+    if(r.sit) return `<tr class="sitout"><td>${r.h}</td><td class="stake">— sit out —</td><td>${eur(r.deficit)}</td><td>—</td><td class="status">·</td></tr>`;
+    const netCls=r.winNet>=1?"pos":"neg";
+    const pill=r.survives?`<span class="pill good">Survives</span>`:`<span class="pill bad">Underwater</span>`;
+    return `<tr class="${r.newCap?'capline':''}"><td>${r.h}</td><td><span class="stake">${eur(r.stake)}</span>${r.capped?'<span class="badge">CAP</span>':''}</td><td>${eur(r.deficitAfter)}</td><td class="net ${netCls}">${(r.winNet>=0?"+":"")+eur(r.winNet)}</td><td class="status">${pill}</td></tr>`;
+  }).join("");
+  $("legend").innerHTML=`<span><b class="net pos">Green net</b> — winning books ≥ €1 and you reset.</span>
+    <span><b class="net neg">Red net</b> — one win no longer digs you out.</span>
+    <span><b style="color:var(--sit)">Sit-out</b> — breaker freezes the bleed.</span>`;
+}
+
+/* ---------- HOLD-THE-WIN MODE ---------- */
+function buildHold(){
+  const base=1, inc=1, N=S.resetN;
+  // staircase until stake hits the cap; that cap-hand's win becomes the target T we hold
+  let h0=Math.ceil((S.cap-base)/inc)+1;          // first hand where stake == cap
+  let dBeforeCap=0; for(let h=1;h<h0;h++) dBeforeCap+=base+(h-1)*inc;
+  const T = S.odds*S.cap - dBeforeCap;            // held win (e.g. 110-45 = 65)
+
+  const rows=[]; let deficit=0, biggest=0;
+  for(let h=1; h<=N; h++){
+    let stake, held=false;
+    if(h<h0){ stake=base+(h-1)*inc; }            // climbing staircase
+    else if(h===h0){ stake=S.cap; held=true; }   // the €cap bet that defines T
+    else { stake=(deficit+T)/S.odds; held=true; }// sized to hold the win at T
+    const dBefore=deficit, winNet=S.odds*stake-dBefore;
+    biggest=Math.max(biggest,stake);
+    rows.push({h,stake,deficitAfter:deficit+stake,winNet,held,isCap:h===h0,isReset:h===N});
+    deficit+=stake;
+  }
+  const maxRisk=deficit;                          // all N hands lost
+  const p=S.winpc/100, pReset=Math.pow(1-p,N);
+  const oneIn = pReset>0 ? (1/pReset) : Infinity;
+  setStats([
+    {k:"Held win (every hand)",v:"+"+eur(T),note:"clean reset on any win"},
+    {k:"Biggest single bet",v:eur(biggest),note:"hand "+N},
+    {k:"Max risk before reset",v:eur(maxRisk),note:N+" no-win hands"},
+    {k:"Chance of hitting reset",v:(pReset*100).toFixed(1)+"%",note:"≈ 1 in "+(oneIn===Infinity?"∞":oneIn.toFixed(1))+" cycles"}
+  ]);
+  setHead(["Hand","Stake to bet","If lost — total down","If WON here — net","Outcome"]);
+  $("rows").innerHTML=rows.map(r=>{
+    if(r.isReset && N>0){
+      return `<tr class="resetline"><td>${r.h}</td><td><span class="stake">${eur(r.stake)}</span></td><td>${eur(r.deficitAfter)}</td><td class="net ${r.held?'hold':'pos'}">+${eur(r.winNet)}</td><td class="status"><span class="pill bad">Reset · take −${eur(r.deficitAfter)}</span></td></tr>`;
+    }
+    const netCls=r.held?"hold":"pos";
+    const pill=r.held?`<span class="pill hold">Reset +${eur(r.winNet)}</span>`:`<span class="pill good">Reset +${eur(r.winNet)}</span>`;
+    return `<tr class="${r.isCap?'capline':''}"><td>${r.h}</td><td><span class="stake">${eur(r.stake)}</span>${r.isCap?'<span class="badge">CAP→HOLD</span>':''}</td><td>${eur(r.deficitAfter)}</td><td class="net ${netCls}">+${eur(r.winNet)}</td><td class="status">${pill}</td></tr>`;
+  }).join("");
+  $("legend").innerHTML=`<span><b class="net hold">Held win</b> — stake grows so every win nets the same +${eur(T)}.</span>
+    <span><b style="color:var(--red-bad)">Reset line</b> — ${N} straight losses; you accept −${eur(maxRisk)} and start over.</span>
+    <span>Stakes shown in € (base unit = €1, so € = units).</span>`;
+}
+
+function setStats(arr){ $("stats").innerHTML=arr.map(s=>`<div class="card"><div class="k">${s.k}</div><div class="v">${s.v}</div><div class="note">${s.note}</div></div>`).join(""); }
+function setHead(cols){ $("thead").innerHTML=cols.map(c=>`<th>${c}</th>`).join(""); }
+function build(){ S.mode==="stair"?buildStair():buildHold(); }
+
+/* ---------- wiring ---------- */
+$("modeSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  S.mode=b.dataset.mode;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".modeStair").forEach(el=>el.classList.toggle("hide",S.mode!=="stair"));
+  document.querySelectorAll(".modeHold").forEach(el=>el.classList.toggle("hide",S.mode!=="hold"));
+  $("ctlHands").classList.toggle("hide",S.mode!=="stair");
+  build();
+});
+$("oddsSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return; S.odds=+b.dataset.odds;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b)); build();
+});
+document.querySelectorAll('[data-step]').forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const key=btn.dataset.step, d=+btn.dataset.d, inp=$(key);
+    let v=Math.max(+inp.min||0,(+inp.value||0)+d);
+    v=Math.round(v*100)/100; inp.value=v; S[key]=v; build();
+  });
+});
+["cap","hands","trig","pause","resetN","winpc"].forEach(id=>{
+  $(id).addEventListener("input",()=>{ S[id]=Math.max(+$(id).min||0,+$(id).value||0); build(); });
+});
+$("brkToggle").addEventListener("click",e=>{
+  S.brk=!S.brk; e.currentTarget.classList.toggle("on",S.brk);
+  $("brkInputs").classList.toggle("hide",!S.brk); build();
+});
+
+build();
+</script>
+</body>
+</html>
