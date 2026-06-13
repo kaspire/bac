@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shoe Statistics Tracker</title>
+<style>
+:root{
+  --ink:#16244a;--muted:#79859b;--line:#e6eaf2;--card:#fff;--soft:#f4f7fc;
+  --red:#e0352b;--blue:#3b5bdb;--num:#7a1f1f;
+  --gold:#e0a020;--gold-bg:#fff7e6;--gold-line:#f3cf7a;
+  --green:#2f9e44;--gray:#e9edf3;--gray-d:#5a6273;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#dfe6f3;color:var(--ink);padding:22px 16px 60px}
+.app{max-width:1000px;margin:0 auto;background:#fff;border:5px solid var(--ink);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:16px;box-shadow:0 18px 40px rgba(22,36,74,.22)}
+h1{font-size:24px;font-weight:800;letter-spacing:-.3px}
+.tagline{color:var(--muted);font-size:13.5px;margin-top:-8px}
+.panel{background:#fff;border:2px solid var(--line);border-radius:16px;padding:16px}
+.panel.soft{background:var(--soft)}
+.panel-title{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+
+/* board */
+.board-scroll{overflow-x:auto}
+.board{display:flex;gap:7px;min-height:210px}
+.bcol{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cells{display:flex;flex-direction:column;gap:6px;padding:4px;border-radius:10px;border:2px solid transparent}
+.bcol.lead .cells{border-color:var(--gold);background:var(--gold-bg)}
+.cell{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.cell.B{background:var(--red)}.cell.P{background:var(--blue)}
+.cell.empty{background:#fff;border:1.5px solid #d7e0f1;box-shadow:none}
+.cnum{width:24px;height:24px;border-radius:50%;background:var(--num);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.cnum.dim{background:#c9b3b3}
+.ccomp{font-size:10px;font-weight:700;color:var(--muted)}
+.ccomp.lead{color:var(--gold)}
+
+/* controls */
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+button{font-family:inherit;cursor:pointer;font-weight:800;font-size:18px;border:none;border-radius:12px;padding:13px 26px;color:#fff;transition:.12s}
+button:active{transform:translateY(1px)}
+.b-bank{background:var(--red)}.b-play{background:var(--blue)}.b-tie{background:var(--green)}
+.b-undo{background:var(--gray);color:var(--gray-d);font-size:15px;padding:13px 18px}
+.b-new{background:var(--num);font-size:15px;padding:13px 18px}
+
+/* summary tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.tile{background:#fbfcfe;border:1px solid var(--line);border-radius:11px;padding:11px 12px;text-align:center}
+.tile .lab{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.tile .val{font-size:23px;font-weight:800;margin-top:2px}
+.tile.b .val{color:var(--red)}.tile.p .val{color:var(--blue)}
+
+/* lead banner */
+.lead-banner{background:var(--gold-bg);border:2px solid #f3cf7a;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.lead-banner .big{font-size:22px;font-weight:800;color:#a86a08}
+.lead-banner .hint{font-size:13px;color:#9a7212;font-weight:600;max-width:520px}
+
+/* composition grid */
+.comp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:620px){.comp-grid{grid-template-columns:repeat(2,1fr)}}
+.comp{background:#fbfcfe;border:2px solid var(--line);border-radius:11px;padding:11px 12px}
+.comp.lead{border-color:var(--gold);background:var(--gold-bg)}
+.comp .name{font-size:15px;font-weight:800;letter-spacing:.5px}
+.comp .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px}
+.comp .cnt{font-size:22px;font-weight:800}
+.comp .pct{font-size:12px;color:var(--muted);font-weight:700}
+.bar{height:7px;background:#eaeef6;border-radius:5px;margin-top:7px;overflow:hidden}
+.barfill{height:100%;background:var(--blue);border-radius:5px}
+.comp.lead .barfill{background:var(--gold)}
+
+.runrow{display:flex;gap:18px;flex-wrap:wrap;font-size:15px;font-weight:700}
+.runrow .rl{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+.runrow .rl b{font-size:19px;color:var(--ink)}
+.muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <h1>Shoe Statistics Tracker</h1>
+    <div class="tagline">Column shapes, leading pattern, and run-length counts — live for the current shoe.</div>
+  </div>
+
+  <div class="panel soft">
+    <div class="board-scroll"><div class="board" id="board"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <button class="b-bank" onclick="add('B')">Banker</button>
+      <button class="b-play" onclick="add('P')">Player</button>
+      <button class="b-tie" onclick="add('T')">Tie</button>
+      <button class="b-undo" onclick="undo()">Undo</button>
+      <button class="b-new" onclick="newShoe()">New Shoe</button>
+    </div>
+  </div>
+
+  <div class="lead-banner" id="leadBanner"></div>
+
+  <div class="panel">
+    <div class="panel-title">Shoe Summary</div>
+    <div class="tiles" id="summary"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Column Shapes (compositions of 4)</div>
+    <div class="comp-grid" id="compGrid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Run Lengths in Shoe</div>
+    <div class="runrow" id="runRow"></div>
+    <div class="muted" style="margin-top:8px">A "run" is a streak of the same side inside a column. Each column of 4 splits into runs that sum to 4.</div>
+  </div>
+</div>
+
+<script>
+const KEY='shoeStats_v1';
+const COMPS=['1-1-1-1','1-1-2','1-2-1','1-3','2-1-1','2-2','3-1','4'];
+let inputs=[];
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(inputs));}catch(e){}}
+function add(x){inputs.push(x);save();render();}
+function undo(){inputs.pop();save();render();}
+function newShoe(){if(inputs.length&&!confirm('Start a new shoe? This clears the board and stats.'))return;inputs=[];save();render();}
+
+function compOf(col){const r=[];let i=0;while(i<4){let j=i;while(j<4&&col[j]===col[i])j++;r.push(j-i);i=j;}return r;}
+function compStr(col){return compOf(col).join('-');}
+
+function build(){
+  const cols=[];let cur=[];let hands=0,b=0,p=0,t=0;
+  for(const x of inputs){hands++;if(x==='T'){t++;continue;}if(x==='B')b++;else p++;cur.push(x);if(cur.length===4){cols.push(cur.slice());cur=[];}}
+  return {cols,cur,hands,b,p,t};
+}
+
+function render(){
+  const st=build();
+  const tally={};COMPS.forEach(c=>tally[c]=0);
+  const runLen={1:0,2:0,3:0,4:0};
+  const colComps=st.cols.map(col=>{const c=compStr(col);tally[c]++;compOf(col).forEach(l=>runLen[l]++);return c;});
+
+  // leading = most frequent shape (>=1)
+  let lead=null,leadN=0;
+  COMPS.forEach(c=>{if(tally[c]>leadN){leadN=tally[c];lead=c;}});
+
+  // board
+  const cells4=[];for(let i=0;i<4;i++)cells4.push(st.cur[i]||null);
+  const all=[...st.cols.map((c,i)=>({col:c,n:i+1,comp:colComps[i],done:true})),{col:cells4,n:st.cols.length+1,comp:null,done:false}];
+  document.getElementById('board').innerHTML=all.map(c=>{
+    const isLead=c.done&&c.comp===lead&&lead!==null;
+    const cellsHtml=c.col.map(s=>s?`<div class="cell ${s}">${s}</div>`:`<div class="cell empty"></div>`).join('');
+    return `<div class="bcol ${isLead?'lead':''}">
+      <div class="cells">${cellsHtml}</div>
+      <div class="cnum ${c.done?'':'dim'}">${c.n}</div>
+      <div class="ccomp ${isLead?'lead':''}">${c.done?c.comp:'…'}</div>
+    </div>`;
+  }).join('');
+
+  // lead banner
+  document.getElementById('leadBanner').innerHTML = lead
+    ? `<div><div class="big">Leading shape: ${lead} <span style="font-size:15px;color:#9a7212">(${leadN} of ${st.cols.length})</span></div></div>
+       <div class="hint">When a forming column matches this shape, its last 2 outcomes are your play — flat bet, grind to 2 wins.</div>`
+    : `<div class="big" style="color:#9a7212">No completed columns yet — log 4 outcomes to set the first shape.</div>`;
+
+  // summary
+  document.getElementById('summary').innerHTML=
+    `<div class="tile"><div class="lab">Hands</div><div class="val">${st.hands}</div></div>`+
+    `<div class="tile b"><div class="lab">Banker</div><div class="val">${st.b}</div></div>`+
+    `<div class="tile p"><div class="lab">Player</div><div class="val">${st.p}</div></div>`+
+    `<div class="tile"><div class="lab">Ties</div><div class="val">${st.t}</div></div>`+
+    `<div class="tile"><div class="lab">Columns</div><div class="val">${st.cols.length}</div></div>`+
+    `<div class="tile"><div class="lab">Current Col</div><div class="val">${st.cur.length}/4</div></div>`;
+
+  // composition grid
+  const total=st.cols.length;
+  document.getElementById('compGrid').innerHTML=COMPS.map(c=>{
+    const n=tally[c],pct=total?n/total*100:0,isLead=c===lead&&lead!==null;
+    return `<div class="comp ${isLead?'lead':''}">
+      <div class="name">${c}</div>
+      <div class="row"><span class="cnt">${n}</span><span class="pct">${pct.toFixed(0)}%</span></div>
+      <div class="bar"><div class="barfill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // run lengths
+  document.getElementById('runRow').innerHTML=[1,2,3,4].map(l=>
+    `<div class="rl">${l}-run &nbsp;<b>${runLen[l]}</b></div>`).join('');
+}
+
+try{const s=localStorage.getItem(KEY);if(s)inputs=JSON.parse(s);}catch(e){}
+render();
+</script>
+</body>
+</html>
