@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Management Tool</title>
+<style>
+:root{
+  --ink:#16244a;--muted:#79859b;--line:#e6eaf2;--card:#fff;--soft:#f4f7fc;
+  --red:#e0352b;--blue:#3b5bdb;--green:#2f9e44;--green-bg:#e7f6ee;
+  --gold:#e0a020;--gold-bg:#fff7e6;--gray:#e9edf3;--gray-d:#5a6273;--stop:#d6342c;--stop-bg:#fdecea;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#dfe6f3;color:var(--ink);padding:22px 16px 60px}
+.app{max-width:1000px;margin:0 auto;background:#fff;border:5px solid var(--ink);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:16px;box-shadow:0 18px 40px rgba(22,36,74,.22)}
+h1{font-size:24px;font-weight:800}
+.tagline{color:var(--muted);font-size:13.5px;margin-top:-8px}
+.panel{background:#fff;border:2px solid var(--line);border-radius:16px;padding:16px}
+.panel.soft{background:var(--soft)}
+.panel-title{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+
+/* settings */
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select{width:100%;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);padding:9px 10px;border:1px solid #d3dae8;border-radius:9px;background:#fff}
+details>summary{cursor:pointer;font-weight:800;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:'⚙'}
+
+/* bet panel */
+.betwrap{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}
+@media(max-width:680px){.betwrap{grid-template-columns:1fr}}
+.betbox{background:#fbfcfe;border:2px solid var(--line);border-radius:14px;padding:16px;text-align:center}
+.betbox .lab{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.bet-main{border-color:#cdd9f5;background:#f3f7ff}
+.bet-side{font-size:34px;font-weight:800;margin:4px 0}
+.bet-side.P{color:var(--blue)}.bet-side.B{color:var(--red)}
+.stake-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+.stake-row input{width:120px;font-family:inherit;font-size:24px;font-weight:800;text-align:center;border:1px solid #d3dae8;border-radius:9px;padding:6px;color:var(--ink)}
+.rule{font-size:12px;color:var(--muted);margin-top:7px;min-height:16px}
+.nextbet{margin-top:10px;font-size:19px;font-weight:800;padding:10px;border-radius:10px;background:#eef2fd;color:var(--ink)}
+.nextbet.P{color:var(--blue)}.nextbet.B{color:var(--red)}
+.val{font-size:30px;font-weight:800;margin-top:4px}
+.val.up{color:var(--green)}.val.down{color:var(--red)}
+.val.hot{color:var(--green)}
+.sub{font-size:13px;color:var(--muted);font-weight:600;margin-top:2px}
+.stopflag{background:var(--stop-bg);color:var(--stop);border:2px solid #f3b0ac;border-radius:12px;padding:10px 14px;font-weight:800;text-align:center;margin-top:4px}
+
+/* outcome strip */
+.strip{display:flex;gap:5px;flex-wrap:wrap;min-height:30px}
+.oc{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff}
+.oc.P{background:var(--blue)}.oc.B{background:var(--red)}.oc.T{background:var(--green)}
+.oc.shoe{background:transparent;color:var(--muted);font-size:18px;width:16px}
+
+/* buttons */
+.controls{display:flex;gap:11px;flex-wrap:wrap;align-items:center}
+button{font-family:inherit;cursor:pointer;font-weight:800;font-size:18px;border:none;border-radius:12px;padding:13px 24px;color:#fff;transition:.12s}
+button:active{transform:translateY(1px)}
+.b-play{background:var(--blue)}.b-bank{background:var(--red)}.b-tie{background:var(--green)}
+.b-undo,.b-edit,.b-new,.b-reset{font-size:14px;padding:12px 16px}
+.b-undo{background:var(--gray);color:var(--gray-d)}
+.b-edit{background:var(--gold);color:#3a2700}.b-edit.on{outline:3px solid #b97e10}
+.b-new{background:#16244a}.b-reset{background:var(--gray-d)}
+.editnote{font-size:13px;color:var(--gold);font-weight:700;margin-top:8px;min-height:16px}
+
+/* log */
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+thead th{font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.r-W{color:var(--green);font-weight:700}.r-L{color:var(--red);font-weight:700}.r-push{color:var(--muted);font-weight:700}
+.bet-P{color:var(--blue);font-weight:700}.bet-B{color:var(--red);font-weight:700}
+.empty td{text-align:center;color:var(--muted);padding:18px}
+.shoe-row td{background:#f4f7fc;color:var(--muted);font-weight:700;text-align:center;font-size:11px;letter-spacing:.5px}
+
+/* shoe stats row */
+.statrow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media(max-width:680px){.statrow{grid-template-columns:repeat(3,1fr)}}
+.scell{background:#fbfcfe;border:1px solid var(--line);border-radius:11px;padding:11px 8px;text-align:center}
+.scell .l{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.scell .v{font-size:23px;font-weight:800;margin-top:2px}
+.scell.p .v{color:var(--blue)}.scell.b .v{color:var(--red)}.scell.t .v{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <h1>Money Management Tool</h1>
+    <div class="tagline">Follow-the-shoe selection · regression / progression staking · live balance &amp; units.</div>
+  </div>
+
+  <div class="panel">
+    <details id="setBox">
+      <summary>Settings</summary>
+      <div class="fields" style="margin-top:14px">
+        <div class="field"><label>Start Balance</label><input id="cStart" type="number" step="100" value="10000" oninput="cfgChange()"></div>
+        <div class="field"><label>1 Unit</label><input id="cUnit" type="number" step="10" value="100" oninput="cfgChange()"></div>
+        <div class="field"><label>Regression (1st win dip)</label><select id="cReg" onchange="cfgChange()"><option value="0.5">50% of base (half)</option><option value="0.25">25% of base</option></select></div>
+        <div class="field"><label>Progression (per further win)</label><select id="cProg" onchange="cfgChange()"><option value="0.25">+25% of unit</option><option value="0.5">+50% of unit</option></select></div>
+        <div class="field"><label>On loss / recovery stake</label><select id="cLoss" onchange="cfgChange()"><option value="add1">+1 unit per loss</option><option value="carry">Current drawdown as stake</option></select></div>
+        <div class="field"><label>STOP target (units)</label><input id="cStop" type="number" step="1" value="3" oninput="cfgChange()"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel">
+    <div class="betwrap">
+      <div class="betbox bet-main">
+        <div class="lab">What to bet</div>
+        <div class="bet-side" id="betSide">PLAYER</div>
+        <div class="stake-row"><span style="font-size:22px;font-weight:800">$</span><input id="stakeInput" type="number" step="1" oninput="updateNextBet()"></div>
+        <div class="rule" id="betRule"></div>
+        <div class="nextbet" id="nextBet"></div>
+      </div>
+      <div class="betbox">
+        <div class="lab">Current Balance</div>
+        <div class="val" id="balVal">$10,000</div>
+        <div class="sub" id="balSub"></div>
+      </div>
+      <div class="betbox">
+        <div class="lab">Units Up / Down</div>
+        <div class="val" id="unitVal">$0</div>
+        <div class="sub" id="unitSub">0.0 units</div>
+      </div>
+    </div>
+    <div id="stopWrap"></div>
+  </div>
+
+  <div class="panel soft">
+    <div class="panel-title">Shoe</div>
+    <div class="strip" id="strip"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Shoe Stats</div>
+    <div class="statrow" id="shoeStats"></div>
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <button class="b-play" onclick="add('P')">Player</button>
+      <button class="b-bank" onclick="add('B')">Banker</button>
+      <button class="b-tie" onclick="add('T')">Tie</button>
+      <button class="b-undo" onclick="undo()">Undo</button>
+      <button class="b-edit" id="editBtn" onclick="toggleEdit()">Edit Last</button>
+      <button class="b-new" onclick="newShoe()">New Shoe</button>
+      <button class="b-reset" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="editnote" id="editNote"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Bet Log</div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>Bet</th><th>Stake</th><th>Outcome</th><th>Result</th><th>Balance</th><th>Units</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='mmTool_v1';
+const r2=x=>Math.round(x*100)/100;
+let events=[], editMode=false, curSel='P';
+let cfg={start:10000,unit:100,reg:0.5,prog:0.25,loss:'add1',stop:3};
+
+function loadCfg(){
+  cfg.start=parseFloat(document.getElementById('cStart').value)||10000;
+  cfg.unit=parseFloat(document.getElementById('cUnit').value)||100;
+  cfg.reg=parseFloat(document.getElementById('cReg').value);
+  cfg.prog=parseFloat(document.getElementById('cProg').value);
+  cfg.loss=document.getElementById('cLoss').value;
+  cfg.stop=parseFloat(document.getElementById('cStop').value)||3;
+}
+function cfgChange(){loadCfg();save();render();}
+
+function replay(){
+  let bal=cfg.start, sel='P', base=cfg.unit, winStreak=0, consecLoss=0, prevPos=true;
+  const stakes=[], results=[];   // non-tie bets only, for the "3 back" lookup
+  const rows=[];
+  for(const ev of events){
+    if(ev.t==='shoe'){sel='P';base=cfg.unit;winStreak=0;consecLoss=0;rows.push({shoe:true});continue;}
+    const o=ev.o, s=ev.s, betOn=sel;
+    if(o==='T'){rows.push({betOn,stake:s,o,result:'push',bal,units:r2((bal-cfg.start)/cfg.unit)});continue;}
+    let result;
+    if(o===sel){
+      result='W'; bal=r2(bal+s); winStreak++; consecLoss=0;
+    }else{
+      result='L'; bal=r2(bal-s); winStreak=0; consecLoss++;
+      const positive=bal>=cfg.start;                               // still in profit after the loss?
+      const last3win=results.length>=3 && results.slice(-3).every(r=>r==='W');
+      if(positive && last3win){ base=stakes[stakes.length-3]; }    // new base = first of last 3 wins
+      else if(!positive){ base=cfg.unit; }                          // in drawdown -> no new base
+      sel=o;                                                        // switch side
+    }
+    const nowPos=bal>=cfg.start;
+    if(nowPos && !prevPos){ winStreak=0; base=cfg.unit; }           // just climbed back to profit -> fresh
+    prevPos=nowPos;
+    stakes.push(s); results.push(result);
+    rows.push({betOn,stake:s,o,result,bal,units:r2((bal-cfg.start)/cfg.unit)});
+  }
+  let suggest, rule;
+  const positive=bal>=cfg.start;
+  if(!positive){
+    if(cfg.loss==='carry'){suggest=r2(cfg.start-bal); rule='recovery · current drawdown';}
+    else{suggest=r2(cfg.unit*(consecLoss+1)); rule='recovery · +1 unit per loss';}
+  }else{
+    if(winStreak===0){suggest=base; rule=(base===cfg.unit?'base bet':'new base '+base);}
+    else if(winStreak===1){suggest=r2(base*cfg.reg); rule=(cfg.reg*100)+'% regression (dip)';}
+    else{suggest=r2(base+cfg.unit*cfg.prog*(winStreak-1)); rule='climbing +'+(cfg.prog*100)+'% of unit / win';}
+  }
+  return {rows,bal,sel,base,winStreak,consecLoss,positive,suggest,rule,units:r2((bal-cfg.start)/cfg.unit)};
+}
+
+function add(o){
+  if(editMode){
+    for(let i=events.length-1;i>=0;i--){if(events[i].t==='o'){events[i].o=o;break;}}
+    editMode=false;
+  }else{
+    const st=replay();
+    const stake=parseFloat(document.getElementById('stakeInput').value)||st.suggest;
+    events.push({t:'o',o,s:r2(stake)});
+  }
+  save();render();
+}
+function undo(){editMode=false;events.pop();save();render();}
+function toggleEdit(){if(!events.some(e=>e.t==='o'))return;editMode=!editMode;render();}
+function newShoe(){editMode=false;events.push({t:'shoe'});save();render();}
+function resetAll(){if(!confirm('Reset everything (balance and log)?'))return;events=[];editMode=false;save();render();}
+
+function updateNextBet(){
+  const side=curSel==='P'?'PLAYER':'BANKER';
+  const v=parseFloat(document.getElementById('stakeInput').value);
+  const el=document.getElementById('nextBet');
+  el.className='nextbet '+curSel;
+  el.textContent='▶ Bet '+side+' — $'+(isNaN(v)?'—':v.toLocaleString());
+}
+
+function fmt(n){return (n<0?'-$':'$')+Math.abs(r2(n)).toLocaleString(undefined,{maximumFractionDigits:2})}
+
+function shoeStats(){
+  let startIdx=0;
+  for(let i=events.length-1;i>=0;i--){if(events[i].t==='shoe'){startIdx=i+1;break;}}
+  const os=events.slice(startIdx).filter(e=>e.t==='o').map(e=>e.o);
+  let P=0,B=0,T=0;os.forEach(o=>{if(o==='P')P++;else if(o==='B')B++;else T++;});
+  const pb=os.filter(o=>o!=='T');
+  let ones=0,twos=0,i=0;
+  while(i<pb.length){let j=i;while(j<pb.length&&pb[j]===pb[i])j++;const len=j-i;if(len===1)ones++;else if(len===2)twos++;i=j;}
+  return {P,B,T,ones,twos,hands:os.length};
+}
+
+function render(){
+  loadCfg();
+  const st=replay();
+
+  // bet panel
+  const side=st.sel==='P'?'PLAYER':'BANKER';
+  const bs=document.getElementById('betSide');bs.textContent=side;bs.className='bet-side '+st.sel;
+  if(document.activeElement.id!=='stakeInput')document.getElementById('stakeInput').value=st.suggest;
+  document.getElementById('betRule').textContent='Suggested: '+st.rule+' — you can override.';
+  curSel=st.sel; updateNextBet();
+
+  document.getElementById('balVal').textContent=fmt(st.bal);
+  document.getElementById('balSub').textContent='Start '+fmt(cfg.start);
+
+  const uv=document.getElementById('unitVal');
+  const profit=r2(st.bal-cfg.start);
+  uv.textContent=(profit>=0?'+':'')+fmt(profit);
+  uv.className='val '+(st.units>=cfg.stop?'hot':(profit>=0?'up':'down'));
+  document.getElementById('unitSub').textContent=(st.units>=0?'+':'')+st.units.toFixed(2)+' units';
+
+  document.getElementById('stopWrap').innerHTML = st.units>=cfg.stop
+    ? `<div class="stopflag">🛑 STOP — target reached (${st.units.toFixed(2)} units). App keeps going if you continue.</div>` : '';
+
+  // strip
+  document.getElementById('strip').innerHTML = events.length
+    ? events.map(e=>e.t==='shoe'?'<div class="oc shoe">|</div>':`<div class="oc ${e.o}">${e.o}</div>`).join('')
+    : '<span style="color:#aab2c5;font-size:13px">New shoe starts on Player. Tap the outcome that occurs.</span>';
+
+  // edit note
+  const eb=document.getElementById('editBtn');eb.className='b-edit'+(editMode?' on':'');
+  document.getElementById('editNote').textContent=editMode?'Edit mode: tap Player / Banker / Tie to replace the last outcome.':'';
+
+  // shoe stats
+  const ss=shoeStats();
+  document.getElementById('shoeStats').innerHTML=
+    `<div class="scell p"><div class="l">P</div><div class="v">${ss.P}</div></div>`+
+    `<div class="scell b"><div class="l">B</div><div class="v">${ss.B}</div></div>`+
+    `<div class="scell"><div class="l">1s (chop)</div><div class="v">${ss.ones}</div></div>`+
+    `<div class="scell"><div class="l">2s</div><div class="v">${ss.twos}</div></div>`+
+    `<div class="scell t"><div class="l">Tie</div><div class="v">${ss.T}</div></div>`+
+    `<div class="scell"><div class="l">Hand</div><div class="v">${ss.hands}</div></div>`;
+
+  // log
+  let n=0;
+  document.getElementById('log').innerHTML = st.rows.length
+    ? st.rows.map(r=>{
+        if(r.shoe)return `<tr class="shoe-row"><td colspan="7">— New shoe —</td></tr>`;
+        n++;
+        const resTxt=r.result==='W'?'Win':r.result==='L'?'Loss':'Push';
+        return `<tr><td>${n}</td><td class="bet-${r.betOn}">${r.betOn==='P'?'Player':'Banker'}</td>
+          <td>${fmt(r.stake)}</td><td>${r.o}</td><td class="r-${r.result}">${resTxt}</td>
+          <td>${fmt(r.bal)}</td><td>${r.units>=0?'+':''}${r.units.toFixed(2)}u</td></tr>`;
+      }).join('')
+    : '<tr class="empty"><td colspan="7">No bets yet.</td></tr>';
+}
+
+try{const s=localStorage.getItem(KEY);if(s){const d=JSON.parse(s);events=d.events||[];if(d.cfg){
+  document.getElementById('cStart').value=d.cfg.start;document.getElementById('cUnit').value=d.cfg.unit;
+  document.getElementById('cReg').value=d.cfg.reg;document.getElementById('cLoss').value=d.cfg.loss;
+  if(d.cfg.prog)document.getElementById('cProg').value=d.cfg.prog;
+  document.getElementById('cStop').value=d.cfg.stop;}}}catch(e){}
+function save(){try{loadCfg();localStorage.setItem(KEY,JSON.stringify({events,cfg}));}catch(e){}}
+render();
+</script>
+</body>
+</html>
